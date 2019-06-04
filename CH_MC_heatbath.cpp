@@ -25,14 +25,22 @@ using namespace std;
 #define n1 5
 #define n2 5
 #define n3 5
-//4th dimension of spin lattice array is 3, to store cartesian components
+//4th dimension of spin lattice array is 2, to store polar components
 //of vector spins
-double spins[n1][n2][n3][3];
+double spins[n1][n2][n3][2];
 double J[3];
+
+//grid of points for CDF integral
+#define Nh 100001
+#define Nm 1024 //ALWAYS 2^N (where N is some integer)
+double CDF[Nh][Nm]; //cumulative distribution function
+
+//a fudge factor that should be ignored if possible
+double x;
 
 //Monte carlo functions
 int PBC(int n, int nmax);
-double local_field(double arr[n1][n2][n3], double js[3], int i, int j, int k);
+double local_field(double arr[n1][n2][n3][2], double js[3], int i, int j, int k);
 double total_X(double arr[n1][n2][n3], double js[3], double u0, double umin, double mmin);
 double total_U(double arr[n1][n2][n3], double js[3], double u0, double umin, double mmin);
 double total_energy(double arr[n1][n2][n3], double js[3], double u0, double umin, double mmin);
@@ -46,6 +54,7 @@ double int_CDF(double h, double hmin, double hmax, double m); //interpolates CDF
 //Non-uniform grid in R space. Points are precisley where they lie on CDF axis. So no information is lost
 int R_to_array(int harr, double R);
 double int_M_adaptive(double h, double hmin, double hmax, double R);
+
 
 
 int main(int argc, char *argv[]){
@@ -92,13 +101,13 @@ int main(int argc, char *argv[]){
         for(int i=0; i<n1; i++){
             for(int j=0; j<n2; j++){
                 for(int k=0; k<n3; k++){
-                	//randomise cartesian components of spin vectors
-                	for (int z=0;z<3;z++){
+                	//randomise polar components of spin vectors
+                	for (int z=0;z<2;z++){
                     	spins[i][j][k][z] = 2*uni_dist(rng)-1;
                 	}
                 	//Normalise random spin vector
-                	double spin_mag = sqrt(spins[i][j][k][0]*spins[i][j][k][0]+spins[i][j][k][1]*spins[i][j][k][1]+spins[i][j][k][2]*spins[i][j][k][2]);
-                	for (int z=0;z<3;z++){
+                	double spin_mag = sqrt(spins[i][j][k][0]*spins[i][j][k][0]+spins[i][j][k][1]*spins[i][j][k][1]);
+                	for (int z=0;z<2;z++){
                 		spins[i][j][k][z] = spins[i][j][k][z]/spin_mag;
                 	}
                 }
@@ -112,7 +121,8 @@ int main(int argc, char *argv[]){
         for(int i=0; i<n1; i++){
             for(int j=0; j<n2; j++){
                 for(int k=0; k<n3; k++){
-                	for (int z=0;z<3;z++){
+                	for (int z=0;z<2;z++){
+                		//Assume spins are already normalised in config file
                     	spin_in >> spins[i][j][k][z];
                 	}
                 }
@@ -122,6 +132,9 @@ int main(int argc, char *argv[]){
     }
     cout << "DONE\n";
     
+
+    //DELETE THIS - USE ANALYTIC FUNCTION INSTEAD
+
     //setting up probability distribution sampler
     double hmin=-Jtot, hmax=Jtot;
     cout << "(*) Generating cumulative distribution function... " << flush;
@@ -152,7 +165,7 @@ int main(int argc, char *argv[]){
     // correlation function (currently out of action)
     double en_avg=0, en2_avg=0, s_avg=0, s2_avg=0;
     double ex_avg=0, ex2_avg=0, eu_avg=0, eu2_avg=0;
-    double si_avg[n1][n2][n3][3]={ }, si2_avg[n1][n2][n3][3]={ };
+    double si_avg[n1][n2][n3][2]={ }, si2_avg[n1][n2][n3][2]={ };
     double s_corr[n3]={ };
     //Running energy totals
     double enX=total_X(spins, J, u0, umin, mmin);
@@ -173,16 +186,18 @@ int main(int argc, char *argv[]){
             int a=site_picker1(rng);
             int b=site_picker2(rng);
             int c=site_picker3(rng);
-            double s_old=spins[a][b][c];
-            double h=local_field(spins, J, a, b, c);
+            double s_old[2] =spins[a][b][c]; //Vector spin now
+            double h[2] = local_field(spins, J, a, b, c);
    
             //computing initial local energy
-            double ex_before=-s_old*h;
-            double eu_before=s_old*(u0+umin)/(mmin*mmin)*(-2*s_old + s_old*s_old*s_old/(mmin*mmin));
+            double ex_before=-(s_old[0]*h[0]+s_old[1]*h[1]);
+            double s_old_sq = (s_old[0]*s_old[0]+s_old[1]*s_old[1]);
+            double eu_before= (u0+umin)/(mmin*mmin)*(-2*s_old_sq + s_old_sq*s_old_sq/(mmin*mmin));
             double len_before=ex_before+eu_before;
           
             //pick new spin from distribution
             double r=uni_dist(rng);
+            //CHANGED EVERYTHING UP TO HERE--------------------------------------
             double s_new=int_M_adaptive(h, hmin, hmax, r);
             
             //compute change in energy and assign new spin
@@ -301,28 +316,39 @@ int PBC(int n, int nmax){
 }
 
 //Computes local field. This is where lattice information enters
-double local_field(double arr[n1][n2][n3], double js[3], int i, int j, int k){
+double local_field(double arr[n1][n2][n3][2], double js[3], int i, int j, int k){
     i=PBC(i,n1);
     j=PBC(j,n2);
     k=PBC(k,n3);
 
-    return (js[0]*(arr[i][j][PBC(k+1,n3)] + arr[i][j][PBC(k-1,n3)]) +
-            js[1]*(arr[i][j][PBC(k+2,n3)] + arr[i][j][PBC(k-2,n3)]) +
-            js[2]*(arr[PBC(i+1,n1)][j][k] + arr[PBC(i-1,n1)][j][k] +
-                   arr[i][PBC(j+1,n2)][k] + arr[i][PBC(j-1,n2)][k] +
-                   arr[PBC(i+1,n1)][PBC(j-1,n2)][k] + arr[PBC(i-1,n1)][PBC(j+1,n2)][k]));
+    //Cubic lattice
+    return ({js[0]*(arr[i][j][PCB(k+1,n3)][0]+arr[i][j][PBC(k-1,n3)][0]) +
+    		 js[1]*(arr[i][PCB(j+1,n2)][k][0]+arr[i][PCB(j-1,n2)][k][0]) +
+    		 js[2]*(arr[PCB(i+1,n1)][j][k][0]+arr[PCB(i-1,n1)][j][k][0]),
+    		 js[0]*(arr[i][j][PCB(k+1,n3)][1]+arr[i][j][PBC(k-1,n3)][1]) +
+    		 js[1]*(arr[i][PCB(j+1,n2)][k][1]+arr[i][PCB(j-1,n2)][k][1]) +
+    		 js[2]*(arr[PCB(i+1,n1)][j][k][1]+arr[PCB(i-1,n1)][j][k][1])})
+
+    //Triangle lattice
+    //return (js[0]*(arr[i][j][PBC(k+1,n3)] + arr[i][j][PBC(k-1,n3)]) +
+    //        js[1]*(arr[i][j][PBC(k+2,n3)] + arr[i][j][PBC(k-2,n3)]) +
+    //        js[2]*(arr[PBC(i+1,n1)][j][k] + arr[PBC(i-1,n1)][j][k] +
+    //               arr[i][PBC(j+1,n2)][k] + arr[i][PBC(j-1,n2)][k] +
+    //               arr[PBC(i+1,n1)][PBC(j-1,n2)][k] + arr[PBC(i-1,n1)][PBC(j+1,n2)][k]));
 }
 
 //Computes TOTAL energy, computed using local_field function
-double total_energy(double arr[n1][n2][n3], double js[3], double u0, double umin, double mmin){
+double total_energy(double arr[n1][n2][n3][2], double js[3], double u0, double umin, double mmin){
     double e=0;
     for(int i=0; i<n1; i++){
         for(int j=0; j<n2; j++){
             for(int k=0; k<n3; k++){
-                double m=arr[i][j][k];
-                e+=u0+m*(-0.5*local_field(arr, js, i, j, k) +
-                                    (u0+umin)/(mmin*mmin)*(-2*m + m*m*m/(mmin*mmin))
-                                    );
+                double m[2]=arr[i][j][k];
+                double l_field[2] = local_field(arr, js, i, j, k)
+                
+                //e+=u0+m*(-0.5*local_field(arr, js, i, j, k) +
+                //                    (u0+umin)/(mmin*mmin)*(-2*m + m*m*m/(mmin*mmin))
+                //                    );
             }
         }
     }
@@ -331,7 +357,7 @@ double total_energy(double arr[n1][n2][n3], double js[3], double u0, double umin
 }
 
 //Computes EXCHANGE energy
-double total_X(double arr[n1][n2][n3], double js[3], double u0, double umin, double mmin){
+double total_X(double arr[n1][n2][n3][2], double js[3], double u0, double umin, double mmin){
     double ex=0;
     for(int i=0; i<n1; i++){
         for(int j=0; j<n2; j++){
@@ -346,7 +372,7 @@ double total_X(double arr[n1][n2][n3], double js[3], double u0, double umin, dou
 }
 
 //Compute ON-SITE energy
-double total_U(double arr[n1][n2][n3], double js[3], double u0, double umin, double mmin){
+double total_U(double arr[n1][n2][n3][2], double js[3], double u0, double umin, double mmin){
     double eu=0;
     for(int i=0; i<n1; i++){
         for(int j=0; j<n2; j++){
