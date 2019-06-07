@@ -25,37 +25,53 @@ using namespace std;
 #define n1 5
 #define n2 5
 #define n3 5
-//4th dimension of spin lattice array is 2, to store polar components
-//of vector spins
-double spins[n1][n2][n3][2];
-double J[3];
+//4th dimension of spin lattice array is 3, to store cartesian vectors
+double spins[n1][n2][n3][3] ={};
+double J[3]={};
 
 //grid of points for CDF integral
 #define Nh 100001
 #define Nm 1024 //ALWAYS 2^N (where N is some integer)
 double CDF[Nh][Nm]; //cumulative distribution function
 
+double pi = 3.141592653589793238463;
+
+
 //a fudge factor that should be ignored if possible
 double x;
-
+//------------------------- Function declarations------------------------------------------
 //Monte carlo functions
 int PBC(int n, int nmax);
-double local_field(double arr[n1][n2][n3][2], double js[3], int i, int j, int k);
-double total_X(double arr[n1][n2][n3], double js[3], double u0, double umin, double mmin);
-double total_U(double arr[n1][n2][n3], double js[3], double u0, double umin, double mmin);
-double total_energy(double arr[n1][n2][n3], double js[3], double u0, double umin, double mmin);
+double local_field(double arr[n1][n2][n3][3], double js[3], int i, int j, int k,double h[3]);
+double total_X(double arr[n1][n2][n3][3], double js[3], double u0, double umin, double mmin);
+double total_U(double arr[n1][n2][n3][3], double js[3], double u0, double umin, double mmin);
+double total_energy(double arr[n1][n2][n3][3], double js[3], double u0, double umin, double mmin);
+
+
+//
+double mapping_function(double h[3],double hmin, double hmax, double r_theta, double r_phi, double kT,double s_new[3]);
+
 
 //Functions for sampling prob dist
-double boltz(double h, double m, double u0, double umin, double mmin, double kT); //bolztmann factor
-double part_func(double h, double u0, double umin, double mmin, double kT); //1site partition function
-void gen_CDF(double hmin, double hmax, double u0, double umin, double mmin, double kT); //does integrals
-double int_CDF(double h, double hmin, double hmax, double m); //interpolates CDF
+//double boltz(double h, double m, double u0, double umin, double mmin, double kT); //bolztmann factor
+//double part_func(double h, double u0, double umin, double mmin, double kT); //1site partition function
+//void gen_CDF(double hmin, double hmax, double u0, double umin, double mmin, double kT); //does integrals
+//double int_CDF(double h, double hmin, double hmax, double m); //interpolates CDF
 //new functions for the mapping function with an irregular grid
 //Non-uniform grid in R space. Points are precisley where they lie on CDF axis. So no information is lost
-int R_to_array(int harr, double R);
-double int_M_adaptive(double h, double hmin, double hmax, double R);
+//int R_to_array(int harr, double R);
+//double int_M_adaptive(double h, double hmin, double hmax, double R);
 
+//Linear algebra helper functions - define my own for now, might import LA library later
+double mag(double v[3]);
+double dot(double v1[3],double v2[3]);
+double matmul(double m1[3][3],double m2[3][3],double m_out[3][3]);
+double matvecmul(double m[3][3],double v_in[3]);
+int normalise(double v[3]);
+int rotate_to_z(double v[3],double m[3][3]);
+int transpose(double m[3][3]);
 
+//-----------------------------------------------------------------------------------------------
 
 int main(int argc, char *argv[]){
     //debug
@@ -79,6 +95,7 @@ int main(int argc, char *argv[]){
                >> eqsweeps >> avsweeps
                >> x;
     sweeps=eqsweeps+avsweeps;
+    //Not sure about this? - only applise to triangular lattice?
     Jtot=2*abs(J[0]) + 2*abs(J[1]) + 6*abs(J[2]);
     
     //scaling units for m* in calculation
@@ -101,15 +118,13 @@ int main(int argc, char *argv[]){
         for(int i=0; i<n1; i++){
             for(int j=0; j<n2; j++){
                 for(int k=0; k<n3; k++){
-                	//randomise polar components of spin vectors
-                	for (int z=0;z<2;z++){
+                	//randomise cartesian components of spin vectors
+                    for(int z=0;z<3;z++){
                     	spins[i][j][k][z] = 2*uni_dist(rng)-1;
-                	}
-                	//Normalise random spin vector
-                	double spin_mag = sqrt(spins[i][j][k][0]*spins[i][j][k][0]+spins[i][j][k][1]*spins[i][j][k][1]);
-                	for (int z=0;z<2;z++){
-                		spins[i][j][k][z] = spins[i][j][k][z]/spin_mag;
-                	}
+                    }
+                    //normalise spin vectors
+                	normalise(spins[i][j][k]);
+                	                	
                 }
             }
         }
@@ -121,9 +136,9 @@ int main(int argc, char *argv[]){
         for(int i=0; i<n1; i++){
             for(int j=0; j<n2; j++){
                 for(int k=0; k<n3; k++){
-                	for (int z=0;z<2;z++){
-                		//Assume spins are already normalised in config file
+                	for (int z=0;z<3;z++){
                     	spin_in >> spins[i][j][k][z];
+                    	normalise(spins[i][j][k]);
                 	}
                 }
             }
@@ -137,8 +152,8 @@ int main(int argc, char *argv[]){
 
     //setting up probability distribution sampler
     double hmin=-Jtot, hmax=Jtot;
-    cout << "(*) Generating cumulative distribution function... " << flush;
-    gen_CDF(hmin, hmax, u0, umin, mmin, kT);
+    //cout << "(*) Generating cumulative distribution function... " << flush;
+    //gen_CDF(hmin, hmax, u0, umin, mmin, kT);
     cout << "DONE\n";
 
     //Debug for testing probability distribution
@@ -161,11 +176,11 @@ int main(int argc, char *argv[]){
     //Initialising averages. In order:
     // energy, squared energy, total spin, total spin squared
     // X energy, squared X energy, U energy, squared U energy
-    // spin per site, squared spin per site
+    // spin (vector) per site, squared (dot product with self) spin per site
     // correlation function (currently out of action)
     double en_avg=0, en2_avg=0, s_avg=0, s2_avg=0;
     double ex_avg=0, ex2_avg=0, eu_avg=0, eu2_avg=0;
-    double si_avg[n1][n2][n3][2]={ }, si2_avg[n1][n2][n3][2]={ };
+    double si_avg[n1][n2][n3][3]={ }, si2_avg[n1][n2][n3]={ };
     double s_corr[n3]={ };
     //Running energy totals
     double enX=total_X(spins, J, u0, umin, mmin);
@@ -174,11 +189,6 @@ int main(int argc, char *argv[]){
     int avsamp=0; //counts the number of data points in average
     
     cout << "(*) Starting Monte Carlo simulation at temperature " << kT/(mmin*mmin) << "... " << flush;
-    /* Need to either: convert cartesian vector coordinates to polar, as probability distribution is polar or;
-    				   convert polar probability ditrubtion to cartesian
-    
-    
-    */
 
     for(int i=0; i<sweeps; i++){
         for(int j=0; j<n1*n2*n3; j++){
@@ -186,28 +196,37 @@ int main(int argc, char *argv[]){
             int a=site_picker1(rng);
             int b=site_picker2(rng);
             int c=site_picker3(rng);
-            double s_old[2] =spins[a][b][c]; //Vector spin now
-            double h[2] = local_field(spins, J, a, b, c);
+            double s_old[3] ={};
+            for(int x=0;x<3;x++){
+            	s_old[x]=spins[a][b][c][x]; //Vector spin now
+            }
+            double h[3] = {};
+            local_field(spins, J, a, b, c, h);
    
             //computing initial local energy
-            double ex_before=-(s_old[0]*h[0]+s_old[1]*h[1]);
-            double s_old_sq = (s_old[0]*s_old[0]+s_old[1]*s_old[1]);
+            double ex_before=-dot(s_old,h);
+            double s_old_sq = dot(s_old,s_old);
             double eu_before= (u0+umin)/(mmin*mmin)*(-2*s_old_sq + s_old_sq*s_old_sq/(mmin*mmin));
             double len_before=ex_before+eu_before;
           
             //pick new spin from distribution
-            double r=uni_dist(rng);
+            double r_theta=uni_dist(rng);
+            double r_phi = uni_dist(rng);
             //CHANGED EVERYTHING UP TO HERE--------------------------------------
-            double s_new=int_M_adaptive(h, hmin, hmax, r);
-            
+            //double s_new=int_M_adaptive(h, hmin, hmax, r);
+            double s_new[3] = {};
+            mapping_function(h,hmin,hmax,r_theta,r_phi,kT,s_new);
             //compute change in energy and assign new spin
-            double ex_after=-s_new*h;
-            double eu_after=s_new*(u0+umin)/(mmin*mmin)*(-2*s_new + s_new*s_new*s_new/(mmin*mmin));
+            double ex_after=-dot(s_new,h);
+            double s_new_sq = dot(s_new,s_new);
+            double eu_after=(u0+umin)/(mmin*mmin)*(-2*s_new_sq + s_new_sq*s_new_sq/(mmin*mmin));
             double len_after=ex_after+eu_after;
             toten+=len_after-len_before;
             enX+=ex_after-ex_before;
             enU+=eu_after-eu_before;
-            spins[a][b][c]=s_new;
+            for(int x=0;x<3;x++){
+            	spins[a][b][c][x]=s_new[x];
+            }
         }
         debug << toten << endl;
         if(i>=eqsweeps && i%1==0){
@@ -218,12 +237,15 @@ int main(int argc, char *argv[]){
             en2_avg+=toten*toten;
             ex2_avg+=enX*enX;
             eu2_avg+=enU*enU;
+            double s[3]={};
             for(int a=0; a<n1; a++){
                 for(int b=0; b<n2; b++){
                     for(int c=0; c<n3; c++){
-                        double s=spins[a][b][c];
-                        si_avg[a][b][c]+=s;
-                        si2_avg[a][b][c]+=s*s;
+                    	for(int x=0;x<3;x++){
+	                        s[x]=spins[a][b][c][x];
+	                        si_avg[a][b][c][x]+=s[x];
+                    	}
+                        si2_avg[a][b][c]+=dot(s,s);	
 //                        if(a==0 && b==0){ //correlation function
 //                            for(int m=0; m<n3; m++){
 //                                s_corr[c]+=spins[a][b][c]*spins[a][b][PBC(m+c,n3)];
@@ -271,11 +293,11 @@ int main(int argc, char *argv[]){
     for(int i=0; i<n1; i++){
         for(int j=0; j<n2; j++){
             for(int k=0; k<n3; k++){
+	            s2_avg+=si2_avg[i][j][k];
+                si2avg_out << si2_avg[i][j][k]/avsweeps << "\t";
             	for (int z=0;z<3;z++){
-	                siavg_out << si_avg[i][j][k][z]/avsweeps << "\t";
-	                si2avg_out << si2_avg[i][j][k][z]/avsweeps << "\t";
 	                s_avg+=si_avg[i][j][k][z];
-	                s2_avg+=si2_avg[i][j][k][z];
+	                siavg_out << si_avg[i][j][k][z]/avsweeps << "\t";
 	                s_out << spins[i][j][k][z] << endl;
 	                if(i==0 && j==0){
 	                    scorr_out << s_corr[k]/avsweeps/(double)n3 << "\t";
@@ -284,6 +306,7 @@ int main(int argc, char *argv[]){
             }
         }
     }
+    
     savg_out << kT/(mmin*mmin) << "\t" << s_avg/avsweeps << endl;
     s2avg_out << kT/(mmin*mmin) << "\t" << s2_avg/avsweeps << endl;
     
@@ -297,7 +320,7 @@ int main(int argc, char *argv[]){
     s_out.close();
     //debug.close();
 
-    return 0;
+    //return 0;
 }
 
 //***********************************//
@@ -316,39 +339,46 @@ int PBC(int n, int nmax){
 }
 
 //Computes local field. This is where lattice information enters
-double local_field(double arr[n1][n2][n3][2], double js[3], int i, int j, int k){
+double local_field(double arr[n1][n2][n3][3], double js[3], int i, int j, int k,double h[3]){
     i=PBC(i,n1);
     j=PBC(j,n2);
     k=PBC(k,n3);
 
     //Cubic lattice
-    return ({js[0]*(arr[i][j][PCB(k+1,n3)][0]+arr[i][j][PBC(k-1,n3)][0]) +
-    		 js[1]*(arr[i][PCB(j+1,n2)][k][0]+arr[i][PCB(j-1,n2)][k][0]) +
-    		 js[2]*(arr[PCB(i+1,n1)][j][k][0]+arr[PCB(i-1,n1)][j][k][0]),
-    		 js[0]*(arr[i][j][PCB(k+1,n3)][1]+arr[i][j][PBC(k-1,n3)][1]) +
-    		 js[1]*(arr[i][PCB(j+1,n2)][k][1]+arr[i][PCB(j-1,n2)][k][1]) +
-    		 js[2]*(arr[PCB(i+1,n1)][j][k][1]+arr[PCB(i-1,n1)][j][k][1])})
+    for (int x=0;x<3;x++){
+    	h[x]=js[0]*(arr[i][j][PBC(k+1,n3)][x]+arr[i][j][PBC(k-1,n3)][x]) +
+    		 js[1]*(arr[i][PBC(j+1,n2)][k][x]+arr[i][PBC(j-1,n2)][k][x]) +
+    		 js[2]*(arr[PBC(i+1,n1)][j][k][x]+arr[PBC(i-1,n1)][j][k][x]);
+    }
+
 
     //Triangle lattice
-    //return (js[0]*(arr[i][j][PBC(k+1,n3)] + arr[i][j][PBC(k-1,n3)]) +
-    //        js[1]*(arr[i][j][PBC(k+2,n3)] + arr[i][j][PBC(k-2,n3)]) +
-    //        js[2]*(arr[PBC(i+1,n1)][j][k] + arr[PBC(i-1,n1)][j][k] +
-    //               arr[i][PBC(j+1,n2)][k] + arr[i][PBC(j-1,n2)][k] +
-    //               arr[PBC(i+1,n1)][PBC(j-1,n2)][k] + arr[PBC(i-1,n1)][PBC(j+1,n2)][k]));
+    /*
+    for (int x=0;x<3;x++){
+    	h[x] = (js[0]*(arr[i][j][PBC(k+1,n3)][x] + arr[i][j][PBC(k-1,n3)][x]) +
+            	js[1]*(arr[i][j][PBC(k+2,n3)][x] + arr[i][j][PBC(k-2,n3)][x]) +
+            	js[2]*(arr[PBC(i+1,n1)][j][k][x] + arr[PBC(i-1,n1)][j][k][x] +
+                   arr[i][PBC(j+1,n2)][k][x] + arr[i][PBC(j-1,n2)][k][x] +
+                   arr[PBC(i+1,n1)][PBC(j-1,n2)][k][x] + arr[PBC(i-1,n1)][PBC(j+1,n2)][k][x]));
+    }
+    */
+    //return 0;
 }
 
 //Computes TOTAL energy, computed using local_field function
-double total_energy(double arr[n1][n2][n3][2], double js[3], double u0, double umin, double mmin){
+double total_energy(double arr[n1][n2][n3][3], double js[3], double u0, double umin, double mmin){
     double e=0;
+    double m[3] ={};
+    double l_field[3] = {};
     for(int i=0; i<n1; i++){
         for(int j=0; j<n2; j++){
             for(int k=0; k<n3; k++){
-                double m[2]=arr[i][j][k];
-                double l_field[2] = local_field(arr, js, i, j, k)
-                
-                //e+=u0+m*(-0.5*local_field(arr, js, i, j, k) +
-                //                    (u0+umin)/(mmin*mmin)*(-2*m + m*m*m/(mmin*mmin))
-                //                    );
+                for(int x=0;x<3;x++){
+                	m[x]=arr[i][j][k][x];
+                }
+                local_field(arr, js, i, j, k,l_field);
+                double m_sq = dot(m,m);
+                e+=u0+(-0.5*dot(m,l_field) + (u0+umin)/(mmin*mmin)*(-2*m_sq + m_sq*m_sq/(mmin*mmin)));
             }
         }
     }
@@ -357,13 +387,19 @@ double total_energy(double arr[n1][n2][n3][2], double js[3], double u0, double u
 }
 
 //Computes EXCHANGE energy
-double total_X(double arr[n1][n2][n3][2], double js[3], double u0, double umin, double mmin){
+double total_X(double arr[n1][n2][n3][3], double js[3], double u0, double umin, double mmin){
     double ex=0;
+    double m[3]={};
+	double l_field[3] = {};
+
     for(int i=0; i<n1; i++){
         for(int j=0; j<n2; j++){
             for(int k=0; k<n3; k++){
-                double m=arr[i][j][k];
-                ex+=-0.5*m*local_field(arr, js, i, j, k);
+            	for(int x=0;x<3;x++){
+                	m[x]=arr[i][j][k][x];
+            	}
+                local_field(arr, js, i, j, k,l_field);
+                ex+=-0.5*dot(m,l_field);
             }
         }
     }
@@ -372,13 +408,19 @@ double total_X(double arr[n1][n2][n3][2], double js[3], double u0, double umin, 
 }
 
 //Compute ON-SITE energy
-double total_U(double arr[n1][n2][n3][2], double js[3], double u0, double umin, double mmin){
+double total_U(double arr[n1][n2][n3][3], double js[3], double u0, double umin, double mmin){
     double eu=0;
+    double m[3]={};
+	double l_field[3] = {};
     for(int i=0; i<n1; i++){
         for(int j=0; j<n2; j++){
             for(int k=0; k<n3; k++){
-                double m=arr[i][j][k];
-                eu+=u0+m*((u0+umin)/(mmin*mmin)*(-2*m + m*m*m/(mmin*mmin)));
+            	for(int x=0;x<3;x++){
+                	m[x]=arr[i][j][k][x];
+                }
+                local_field(arr, js, i, j, k,l_field);
+                double m_sq = dot(m,m);
+                eu+=u0+((u0+umin)/(mmin*mmin)*(-2*m_sq + m_sq*m_sq/(mmin*mmin)));
             }
         }
     }
@@ -386,12 +428,167 @@ double total_U(double arr[n1][n2][n3][2], double js[3], double u0, double umin, 
     return eu;
 }
 
+
+double mapping_function(double h[3],double hmin, double hmax, double r_theta, double r_phi, double kT,double s_new[3]){
+	//Analytic mapping function for inverse transform sampling
+	//Rotate h to be along z axis, and store rotation matrix. Angles are easy to define wrt z axis.
+	//Generate random vector from angular distribution and rotate back.
+	
+	//initialise s_new output at 0
+	for(int x=0;x<3;x++){
+		s_new[x]=0;
+	}
+	double h_mag = mag(h);
+	//rotation maps e_z to direction of h. 
+	double rotation[3][3] = {};
+	rotate_to_z(h,rotation);
+
+
+	//theta component
+	double theta = acos((kT/h_mag)*log((1-r_theta)*exp(h_mag/kT)+r_theta*exp(-h_mag/kT)));
+	//phi component
+	double phi = 2*((double)pi*r_phi);
+	//Set s_new to vector with random angles drawn from specified distribution. 
+	//Angles wrt e_z (i.e. typical spherical polar coords)
+	s_new[0] = cos(phi)*sin(theta);
+	s_new[1] = sin(phi)*sin(theta);
+	s_new[2] = cos(theta);
+	matvecmul(rotation,s_new);
+	//return 0;
+}
+
+
+//***********************************//
+//-----------------------------------//
+// Linear Algebra helper functions   //
+//-----------------------------------//
+//***********************************//
+
+
+double mag(double v[3]){
+	return (sqrt(v[0]*v[0]+v[1]*v[1]+v[2]*v[2]));
+}
+
+double dot(double v1[3],double v2[3]){
+	return (v1[0]*v2[0]+v1[1]*v2[1]+v1[2]*v2[2]);
+}
+
+
+double matvecmul(double m[3][3],double v_in[3]){
+  double v_out[3] = {0,0,0};
+  for(int x=0;x<3;x++){
+    for(int y=0;y<3;y++){
+      v_out[x]+=m[x][y]*v_in[y];
+    }
+  }
+  for(int x=0;x<3;x++){
+    v_in[x]=v_out[x];
+  }
+  //return 0;
+}
+
+double matmul(double m1[3][3],double m2[3][3],double m_out[3][3]){
+  //naive matrix multiplication
+  for(int x=0;x<3;x++){
+    for(int y=0;y<3;y++){
+      m_out[x][y] = 0;
+    }
+  }
+  for(int x=0;x<3;x++){
+    for(int y=0;y<3;y++){
+      for(int z=0;z<3;z++){
+        m_out[x][y]+=m1[x][z]*m2[z][y];
+      }
+    }
+  }
+  //return 0;
+}
+
+int normalise(double v[3]){
+  double mag = sqrt(v[0]*v[0]+v[1]*v[1]+v[2]*v[2]);
+  for(int x=0;x<3;x++){
+    v[x] = v[x]/mag;
+  }
+  //return 0;
+}
+
+int transpose(double m[3][3]){
+  double m_copy[3][3] = {};
+  for(int x=0;x<3;x++){
+    for(int y=0;y<3;y++){
+      m_copy[x][y] = m[x][y];
+    }
+  }
+  for(int x=0;x<3;x++){
+    for(int y=0;y<3;y++){
+      m[x][y] = m_copy[y][x];
+    }
+  }
+  //return 0;
+}
+
+
+
+
+
+int rotate_to_z(double v[3],double m[3][3]){
+  //Calculates rotation matrix required to tranform e_z to given vector v.
+  //First find rotation matrix mapping v to e_z, then invert(transpose).
+
+  //initialise stuff
+  double vec[3] = {};
+  for(int x=0;x<3;x++){
+    vec[x]=v[x];
+    for(int y=0;y<3;y++){
+      m[x][y] = 0;
+    }
+  }
+  normalise(vec);
+  double x = vec[0];
+  double y = vec[1];
+  double z = vec[2];
+
+  //If y is zero, there is divide by 0 error
+  if (y!=0){
+    double k = x/y;
+    double k_root = sqrt(k*k+1);
+    double rz[3][3] = {{1/k_root,-k/k_root,0},{k/k_root,1/k_root,0},{0,0,1}};
+    double rx[3][3] = {{1,0,0},{0,z,-copysign(sqrt(1-z*z),y)},{0,copysign(sqrt(1-z*z),y),z}};
+    //Chain together rotation about z and x axes.
+    matmul(rx,rz,m);
+  }
+  else{
+  	//Only need rotation about y axis
+    double ry[3][3] = {{z,0,-copysign(sqrt(1-z*z),x)},{0,1,0},{copysign(sqrt(1-z*z),x),0,z}};
+    for(int a=0;a<3;a++){
+      for(int b=0;b<3;b++){
+        m[a][b] = ry[a][b];
+      }
+    }
+  }
+  //matvecmul(m,vec,v);
+  //Transpose matrix as inverse rotation (i.e. e_z -> v) is needed.
+  transpose(m);
+  //return 0;
+}
+
+
+
+
+
+
+
+
+
+
+
+
 //***********************************//
 //-----------------------------------//
 //        M sampler FUNCTIONS        //
 //-----------------------------------//
 //***********************************//
-
+/*
 //boltzmann factor
 double boltz(double h, double m, double u0, double umin, double mmin, double kT){
     return exp( -(x+u0+m*(-h + (u0+umin)*(-2*m + m*m*m/(mmin*mmin))/(mmin*mmin)))/kT );
@@ -594,4 +791,5 @@ double int_M_adaptive(double h, double hmin, double hmax, double R){
     
     return outp;
 }
+*/
 
