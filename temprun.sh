@@ -15,10 +15,10 @@ g++ -std=c++11 -g -O3 CH_MC_heatbath.cpp -o outp.o
 dT=0.2
 
 #initial high temperature run
-./outp.o none 100 1
+./outp.o none 200 1
 
 #cooling system
-for j in $(seq 500 -1 1); do
+for j in $(seq 1000 -1 1); do
 kT=$(echo "scale=4; $j*$dT"|bc)
 ./outp.o spins_after.txt $kT 1
 done
