@@ -22,9 +22,9 @@ eqsweeps avsweeps
 using namespace std;
 
 //array size for spin lattice
-#define n1 10
-#define n2 10
-#define n3 10
+#define n1 8
+#define n2 8
+#define n3 8
 //4th dimension of spin lattice array is 3, to store cartesian vectors
 double spins[n1][n2][n3][3] ={};
 double J[3]={};
