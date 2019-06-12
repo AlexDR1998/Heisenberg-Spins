@@ -469,7 +469,7 @@ double mapping_function(double h[3], double js[3],double hmin, double hmax, doub
 	//Angles wrt e_z (i.e. typical spherical polar coords)
 	double sin_theta = sqrt(1-cos_theta*cos_theta); 
 
-	if(isnan(cos_theta)){
+	if(std::isnan(cos_theta)){
 		cos_theta=1;
 		sin_theta=0;
 	}
