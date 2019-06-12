@@ -8,7 +8,7 @@
 #module load intel/2016
 
 #compile c++ script first
-g++ -std=c++11 -g -O3 CH_MC_heatbath.cpp -o outp.o
+g++ -std=c++11 -g -O3 -mcmodel=medium CH_MC_heatbath.cpp -o outp.o
 
 #high temperature run
 ./outp.o none 10.0 1
