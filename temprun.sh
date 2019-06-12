@@ -1,3 +1,8 @@
+#! /bin/sh
+#$ -N testjob
+#$ -cwd
+#$ -l h_rt=01:00:00
+#$ -l h_vmem=8G
 #compile c++ script first
 #g++ -std=c++11 -g -O3 -mcmodel=medium source.cpp -o outp.o
 g++ -std=c++11 -g -O3 CH_MC_heatbath.cpp -o outp.o
