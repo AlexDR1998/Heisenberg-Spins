@@ -4,7 +4,8 @@
 #$ -l h_rt=01:00:00
 #$ -l h_vmem=8G
 
-#. /etc/profile.d/modules.sh
+. /etc/profile.d/modules.sh
+
 module load intel/2016
 
 #compile c++ script first
