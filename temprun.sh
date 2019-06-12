@@ -1,5 +1,5 @@
 #! /bin/sh
-#$ -N testjob
+#$ -N CH_cooling
 #$ -cwd
 #$ -l h_rt=01:00:00
 #$ -l h_vmem=8G
