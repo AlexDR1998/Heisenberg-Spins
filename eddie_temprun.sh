@@ -1,8 +1,8 @@
 #! /bin/sh
 #$ -N CH_cooling
 #$ -cwd
-#$ -l h_rt=04:00:00
-#$ -l h_vmem=32G
+#$ -l h_rt=24:00:00
+#$ -l h_vmem=16G
 #compile c++ script first
 #g++ -std=c++11 -g -O3 -mcmodel=medium source.cpp -o outp.o
 g++ -std=c++11 -g -O2 -mcmodel=large ../CH_MC_heatbath.cpp -o outp.o
@@ -17,10 +17,10 @@ g++ -std=c++11 -g -O2 -mcmodel=large ../CH_MC_heatbath.cpp -o outp.o
 >spin_corr.txt
 
 #temperature step size
-dT=0.02
+dT=0.01
 
 #initial high temperature run
-./outp.o none 10 1
+./outp.o none 5 1
 
 #cooling system
 for j in $(seq 500 -1 1); do
