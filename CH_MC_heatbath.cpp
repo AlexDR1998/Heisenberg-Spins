@@ -22,17 +22,17 @@ eqsweeps avsweeps
 using namespace std;
 
 //array size for spin lattice
-#define n1 10
-#define n2 10
-#define n3 10
+#define n1 30
+#define n2 30
+#define n3 30
 //4th dimension of spin lattice array is 3, to store cartesian vectors
 double spins[n1][n2][n3][3] ={};
 double J[3]={};
 
 //grid of points for CDF integral
-#define Nh 100001
-#define Nm 1024 //ALWAYS 2^N (where N is some integer)
-double CDF[Nh][Nm]; //cumulative distribution function
+//#define Nh 100001
+//#define Nm 1024 //ALWAYS 2^N (where N is some integer)
+//double CDF[Nh][Nm]; //cumulative distribution function
 
 double pi = 3.141592653589793238463;
 
@@ -245,10 +245,10 @@ int main(int argc, char *argv[]){
             en2_avg+=toten*toten;
             ex2_avg+=enX*enX;
             eu2_avg+=enU*enU;
+			double s[3]={};
             for(int a=0; a<n1; a++){
                 for(int b=0; b<n2; b++){
                     for(int c=0; c<n3; c++){
-        				double s[3]={};
                     	for(int x=0;x<3;x++){
 	                        s[x]=spins[a][b][c][x];
 	                        si_avg[a][b][c][x]+=s[x];
@@ -390,7 +390,6 @@ double total_energy(double arr[n1][n2][n3][3], double js[3], double u0, double u
             }
         }
     }
-    
     return e;
 }
 
