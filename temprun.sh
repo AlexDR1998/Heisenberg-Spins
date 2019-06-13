@@ -5,7 +5,7 @@
 #$ -l h_vmem=8G
 #compile c++ script first
 #g++ -std=c++11 -g -O3 -mcmodel=medium source.cpp -o outp.o
-g++ -std=c++11 -g -O3 CH_MC_heatbath.cpp -o outp.o
+g++ -std=c++11 -g -O3 -mcmodel=medium CH_MC_heatbath.cpp -o outp.o
 #g++ -std=c++11 -g -O3 IL_MC_heatbath_split.cpp -o outp.o
 #empties the output files
 >energy.txt
