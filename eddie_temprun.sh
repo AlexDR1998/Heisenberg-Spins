@@ -2,10 +2,10 @@
 #$ -N CH_cooling
 #$ -cwd
 #$ -l h_rt=04:00:00
-#$ -l h_vmem=8G
+#$ -l h_vmem=32G
 #compile c++ script first
 #g++ -std=c++11 -g -O3 -mcmodel=medium source.cpp -o outp.o
-g++ -std=c++11 -g -O3 -mcmodel=large ../CH_MC_heatbath.cpp -o outp.o
+g++ -std=c++11 -g -O2 -mcmodel=large ../CH_MC_heatbath.cpp -o outp.o
 #g++ -std=c++11 -g -O3 IL_MC_heatbath_split.cpp -o outp.o
 #empties the output files
 >energy.txt
