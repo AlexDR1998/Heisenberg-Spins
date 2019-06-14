@@ -22,9 +22,9 @@ eqsweeps avsweeps
 using namespace std;
 
 //array size for spin lattice
-#define n1 5
-#define n2 5
-#define n3 5
+#define n1 10
+#define n2 10
+#define n3 10
 //4th dimension of spin lattice array is 3, to store cartesian vectors
 double spins[n1][n2][n3][3] ={};
 double J[3]={};
@@ -182,7 +182,7 @@ int main(int argc, char *argv[]){
     // X energy, squared X energy, U energy, squared U energy
     // spin (vector) per site, squared (dot product with self) spin per site
     // correlation function (currently out of action)
-    double en_avg=0, en2_avg=0, s_avg=0, s2_avg=0;
+    double en_avg=0, en2_avg=0, s_avg[3]={}, s2_avg=0;
     double ex_avg=0, ex2_avg=0, eu_avg=0, eu2_avg=0;
     double si_avg[n1][n2][n3][3]={ }, si2_avg[n1][n2][n3]={ };
     double s_corr[n3]={ };
@@ -304,7 +304,7 @@ int main(int argc, char *argv[]){
 	            s2_avg+=si2_avg[i][j][k];
                 si2avg_out << si2_avg[i][j][k]/avsweeps << "\t";
             	for (int z=0;z<3;z++){
-	                s_avg+=si_avg[i][j][k][z];
+	                s_avg[z]+=si_avg[i][j][k][z];
 	                siavg_out << si_avg[i][j][k][z]/avsweeps << "\t";
 	                s_out << spins[i][j][k][z] << endl;
 	                if(i==0 && j==0){
@@ -314,9 +314,15 @@ int main(int argc, char *argv[]){
             }
         }
     }
-    
-    savg_out << kT/(mmin*mmin) << "\t" << s_avg/avsweeps << endl;
-    s2avg_out << kT/(mmin*mmin) << "\t" << s2_avg/avsweeps << endl;
+    savg_out << kT/(mmin*mmin) << "\t";
+    for(int x=0;x<3;x++){
+    	s_avg[x]=s_avg[x]/avsweeps;
+    	savg_out <<" "<< s_avg[x];
+    }
+    savg_out << endl;
+    //s2avg_out << kT/(mmin*mmin) << "\t" << s2_avg/avsweeps << endl;
+    //output both average of spin magnitudes^2 and magnitude^2 of average spin
+    s2avg_out << kT/(mmin*mmin) << "\t" << s2_avg/avsweeps <<" "<< dot(s_avg,s_avg) << endl;
     
     enavg_out.close();
     en2avg_out.close();
