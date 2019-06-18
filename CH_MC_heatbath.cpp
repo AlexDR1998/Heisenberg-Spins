@@ -22,9 +22,9 @@ eqsweeps avsweeps
 using namespace std;
 
 //array size for spin lattice
-#define n1 20
-#define n2 20
-#define n3 20
+#define n1 6
+#define n2 6
+#define n3 6
 //4th dimension of spin lattice array is 3, to store cartesian vectors
 double spins[n1][n2][n3][3] ={};
 double J[3]={};
@@ -65,6 +65,7 @@ double mapping_function(double h[3],double js[3],double hmin, double hmax, doubl
 //Linear algebra helper functions - define my own for now, might import LA library later
 double mag(double v[3]);
 double dot(double v1[3],double v2[3]);
+double mul(double v1[3],double v2[3],double v_out[3]);
 double matmul(double m1[3][3],double m2[3][3],double m_out[3][3]);
 double matvecmul(double m[3][3],double v_in[3]);
 int normalise(double v[3]);
@@ -180,10 +181,12 @@ int main(int argc, char *argv[]){
     //Initialising averages. In order:
     // energy, squared energy, total spin, total spin squared
     // X energy, squared X energy, U energy, squared U energy
+    // total spin on even sites, total spin on odd sites
     // spin (vector) per site, squared (dot product with self) spin per site
     // correlation function (currently out of action)
     double en_avg=0, en2_avg=0, s_avg[3]={}, s2_avg=0;
     double ex_avg=0, ex2_avg=0, eu_avg=0, eu2_avg=0;
+    double s_even_avg[3]={}, s_odd_avg[3]={},s2_even_avg=0,s2_odd_avg=0;
     double si_avg[n1][n2][n3][3]={ }, si2_avg[n1][n2][n3]={ };
     double s_corr[n3]={ };
     //Running energy totals
@@ -274,6 +277,12 @@ int main(int argc, char *argv[]){
     ofstream eS2avg_out;
     ofstream savg_out;
     ofstream s2avg_out;
+    
+    ofstream s_even_avg_out;
+    ofstream s_odd_avg_out;
+    ofstream s2_even_avg_out;
+    ofstream s2_odd_avg_out;
+
     ofstream siavg_out;
     ofstream si2avg_out;
     ofstream scorr_out;
@@ -287,6 +296,12 @@ int main(int argc, char *argv[]){
     eS2avg_out.open("energysplit2.txt", fstream::app);
     savg_out.open("spin_total.txt", fstream::app);
     s2avg_out.open("spin2_total.txt", fstream::app);
+
+    s_even_avg_out.open("spin_total_even.txt",fstream::app);
+    s_odd_avg_out.open("spin_total_odd.txt",fstream::app);
+    s2_even_avg_out.open("spin2_total_even.txt",fstream::app);
+    s2_odd_avg_out.open("spin2_total_odd.txt",fstream::app);
+
     siavg_out.open("spins.txt", fstream::app);
     si2avg_out.open("spins2.txt", fstream::app);
     scorr_out.open("spin_corr.txt", fstream::app);
@@ -301,7 +316,7 @@ int main(int argc, char *argv[]){
     for(int i=0; i<n1; i++){
         for(int j=0; j<n2; j++){
             for(int k=0; k<n3; k++){
-	            s2_avg+=si2_avg[i][j][k];
+                s2_avg+=si2_avg[i][j][k];
                 si2avg_out << si2_avg[i][j][k]/avsweeps << "\t";
             	for (int z=0;z<3;z++){
 	                s_avg[z]+=si_avg[i][j][k][z];
@@ -310,29 +325,58 @@ int main(int argc, char *argv[]){
 	                if(i==0 && j==0){
 	                    scorr_out << s_corr[k]/avsweeps/(double)n3 << "\t";
 	                }
+                }      
+                if((i+j+k)%2==0){
+                    //even lattice sites
+                    s2_even_avg+=si2_avg[i][j][k];
+                    for(int z=0;z<3;z++){
+                        s_even_avg[z]=s_avg[z];
+                    }
+                }else{
+                    //odd lattice sites
+                    s2_odd_avg+=si2_avg[i][j][k];
+                    for(int z=0;z<3;z++){
+                        s_odd_avg[z]=s_avg[z];
+                    }
                 }
             }
         }
     }
     savg_out << kT/(mmin*mmin) << "\t";
+    s_even_avg_out << kT/(mmin*mmin) << "\t";
+    s_odd_avg_out << kT/(mmin*mmin) << "\t";
+
     for(int x=0;x<3;x++){
-    	s_avg[x]=s_avg[x]/avsweeps;
-    	savg_out <<" "<< s_avg[x];
+    	s_avg[x]/=(avsweeps);
+        s_even_avg[x]/=(avsweeps);
+        s_odd_avg[x]/=(avsweeps);
+    	savg_out << " " << s_avg[x];
+        s_even_avg_out << " " << s_even_avg[x];
+        s_odd_avg_out << " " << s_odd_avg[x];
     }
     savg_out << endl;
+    s_even_avg_out<<endl;
+    s_odd_avg_out<<endl;
+
     //s2avg_out << kT/(mmin*mmin) << "\t" << s2_avg/avsweeps << endl;
     //output both average of spin magnitudes^2 and magnitude^2 of average spin
-    s2avg_out << kT/(mmin*mmin) << "\t" << s2_avg/avsweeps <<" "<< dot(s_avg,s_avg) << endl;
-    
+    s2avg_out << kT/(mmin*mmin) << "\t" << s2_avg/(avsweeps) <<" "<< dot(s_avg,s_avg) << endl;
+    s2_even_avg_out << kT/(mmin*mmin) << "\t" << s2_even_avg/(avsweeps) <<" "<< dot(s_even_avg,s_even_avg) << endl;
+    s2_odd_avg_out << kT/(mmin*mmin) << "\t" << s2_odd_avg/(avsweeps) <<" "<< dot(s_odd_avg,s_odd_avg) << endl;
+
     enavg_out.close();
     en2avg_out.close();
     savg_out.close();
     s2avg_out.close();
+    s_even_avg_out.close();
+    s_odd_avg_out.close();
+    s2_even_avg_out.close();
+    s2_odd_avg_out.close();
     siavg_out.close();
     si2avg_out.close();
     scorr_out.close();
     s_out.close();
-    //debug.close();
+    debug.close();
 
     //return 0;
 }
@@ -360,8 +404,8 @@ double local_field(double arr[n1][n2][n3][3], double js[3], int i, int j, int k,
 
     //Cubic lattice
     for (int x=0;x<3;x++){
-    	h[x]=js[0]*(arr[i][j][PBC(k+1,n3)][x]+arr[i][j][PBC(k-1,n3)][x]) +
-    		 js[0]*(arr[i][PBC(j+1,n2)][k][x]+arr[i][PBC(j-1,n2)][k][x]) +
+    	h[x]=js[2]*(arr[i][j][PBC(k+1,n3)][x]+arr[i][j][PBC(k-1,n3)][x]) +
+    		 js[1]*(arr[i][PBC(j+1,n2)][k][x]+arr[i][PBC(j-1,n2)][k][x]) +
     		 js[0]*(arr[PBC(i+1,n1)][j][k][x]+arr[PBC(i-1,n1)][j][k][x]);
     }
 
@@ -452,8 +496,11 @@ double mapping_function(double h[3], double js[3],double hmin, double hmax, doub
 		s_new[x]=0;
 	}
 	//just use js[0] for cubic lattice
-	double h_mag = js[0]*mag(h);
-	//cout<<h_mag<<endl;
+    double h_temp[3] = {};
+    mul(h,js,h_temp);
+	//double h_mag = copysign(mag(h_temp),h[0]*h[1]*h[2]);
+	double h_mag = mag(h_temp);
+    //cout<<h_mag<<endl;
 	//rotation maps e_z to direction of h. 
 	double rotation[3][3] = {};
 	rotate_to_z(h,rotation);
@@ -499,6 +546,13 @@ double mag(double v[3]){
 
 double dot(double v1[3],double v2[3]){
 	return (v1[0]*v2[0]+v1[1]*v2[1]+v1[2]*v2[2]);
+}
+
+
+double mul(double v1[3],double v2[3],double v_out[3]){
+    for(int x=0;x<3;x++){
+        v_out[x]=v1[x]*v2[x];
+    }
 }
 
 
