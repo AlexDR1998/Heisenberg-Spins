@@ -22,9 +22,9 @@ eqsweeps avsweeps
 using namespace std;
 
 //array size for spin lattice
-#define n1 6
-#define n2 6
-#define n3 6
+#define n1 10
+#define n2 10
+#define n3 10
 //4th dimension of spin lattice array is 3, to store cartesian vectors
 double spins[n1][n2][n3][3] ={};
 double J[3]={};
@@ -404,9 +404,9 @@ double local_field(double arr[n1][n2][n3][3], double js[3], int i, int j, int k,
 
     //Cubic lattice
     for (int x=0;x<3;x++){
-    	h[x]=js[2]*(arr[i][j][PBC(k+1,n3)][x]+arr[i][j][PBC(k-1,n3)][x]) +
+    	h[x]=js[0]*(arr[i][j][PBC(k+1,n3)][x]+arr[i][j][PBC(k-1,n3)][x]) +
     		 js[1]*(arr[i][PBC(j+1,n2)][k][x]+arr[i][PBC(j-1,n2)][k][x]) +
-    		 js[0]*(arr[PBC(i+1,n1)][j][k][x]+arr[PBC(i-1,n1)][j][k][x]);
+    		 js[2]*(arr[PBC(i+1,n1)][j][k][x]+arr[PBC(i-1,n1)][j][k][x]);
     }
 
 
@@ -496,10 +496,11 @@ double mapping_function(double h[3], double js[3],double hmin, double hmax, doub
 		s_new[x]=0;
 	}
 	//just use js[0] for cubic lattice
-    double h_temp[3] = {};
-    mul(h,js,h_temp);
-	//double h_mag = copysign(mag(h_temp),h[0]*h[1]*h[2]);
-	double h_mag = mag(h_temp);
+    //double h_temp[3] = {};
+    //mul(h,js,h_temp);
+	double h_mag = copysign(mag(h),js[0]*js[1]*js[2]);
+	//double h_mag = mag(h_temp);
+    //double h_mag = js[0]*mag(h);
     //cout<<h_mag<<endl;
 	//rotation maps e_z to direction of h. 
 	double rotation[3][3] = {};
