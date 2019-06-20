@@ -330,13 +330,13 @@ int main(int argc, char *argv[]){
                     //even lattice sites
                     s2_even_avg+=si2_avg[i][j][k];
                     for(int z=0;z<3;z++){
-                        s_even_avg[z]=s_avg[z];
+                        s_even_avg[z]+=si_avg[i][j][k][z];
                     }
                 }else{
                     //odd lattice sites
                     s2_odd_avg+=si2_avg[i][j][k];
                     for(int z=0;z<3;z++){
-                        s_odd_avg[z]=s_avg[z];
+                        s_odd_avg[z]+=si_avg[i][j][k][z];
                     }
                 }
             }
@@ -498,7 +498,7 @@ double mapping_function(double h[3], double js[3],double hmin, double hmax, doub
 	//just use js[0] for cubic lattice
     //double h_temp[3] = {};
     //mul(h,js,h_temp);
-	double h_mag = copysign(mag(h),js[0]*js[1]*js[2]);
+	double h_mag = mag(h);//copysign(mag(h),js[0]*js[1]*js[2]);
 	//double h_mag = mag(h_temp);
     //double h_mag = js[0]*mag(h);
     //cout<<h_mag<<endl;
