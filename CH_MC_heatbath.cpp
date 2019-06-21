@@ -29,13 +29,7 @@ using namespace std;
 double spins[n1][n2][n3][3] ={};
 double J[3]={};
 
-//grid of points for CDF integral
-//#define Nh 100001
-//#define Nm 1024 //ALWAYS 2^N (where N is some integer)
-//double CDF[Nh][Nm]; //cumulative distribution function
-
 double pi = 3.141592653589793238463;
-
 
 //a fudge factor that should be ignored if possible
 double q;
@@ -49,7 +43,7 @@ double total_energy(double arr[n1][n2][n3][3], double js[3], double u0, double u
 
 
 //
-double mapping_function(double h[3],double js[3],double hmin, double hmax, double r_theta, double r_phi, double kT,double s_new[3]);
+double mapping_function(double h[3],double hmin, double hmax, double r_theta, double r_phi, double kT,double s_new[3]);
 
 
 //Functions for sampling prob dist
@@ -125,9 +119,7 @@ int main(int argc, char *argv[]){
                     	spins[i][j][k][z] = 2*uni_dist(rng)-1;
                     }
                     //normalise spin vectors
-                	normalise(spins[i][j][k]);
-                	//debug<<mag(spins[i][j][k])<<endl;
-                	                	
+                	normalise(spins[i][j][k]);	                	
                 }
             }
         }
@@ -141,8 +133,6 @@ int main(int argc, char *argv[]){
                 for(int k=0; k<n3; k++){
                 	for (int z=0;z<3;z++){
                     	spin_in >> spins[i][j][k][z];
-                    	//debug<<spins[i][j][k][z]<<endl;
-                    	//spins[i][j][k][z]<<spin_in;
                     	normalise(spins[i][j][k]);
                 	}
                 }
@@ -153,30 +143,8 @@ int main(int argc, char *argv[]){
     cout << "DONE\n";
     
 
-    //DELETE THIS - USE ANALYTIC FUNCTION INSTEAD
-
-    //setting up probability distribution sampler
     double hmin=-Jtot, hmax=Jtot;
-    //cout << "(*) Generating cumulative distribution function... " << flush;
-    //gen_CDF(hmin, hmax, u0, umin, mmin, kT);
-    //cout << "DONE\n";
 
-    //Debug for testing probability distribution
-//    ofstream foutp;
-//    ofstream foutd ("ha.txt");
-//    for(int i=1; i<=20; i++){
-//        double h = (hmax-hmin)*(2*uni_dist(rng)-1)/2;
-//
-//
-//        foutd << i << "\t" << h << endl;
-//        cout << i << "\t" << h << endl;
-//
-//        foutp.open("p_sample_"+to_string(i)+".txt");
-//        for(int j=0; j<50000; j++){
-//            foutp << int_M(h, hmin, hmax, uni_dist(rng)) << endl;
-//        }
-//        foutp.close();
-//    }
     
     //Initialising averages. In order:
     // energy, squared energy, total spin, total spin squared
@@ -209,9 +177,6 @@ int main(int argc, char *argv[]){
             }
             double h[3] = {};
             local_field(spins, J, a, b, c, h);
-            //for(int x=0;x<3;x++){
-            //	debug<<h[x]<<endl;
-            //}
             //computing initial local energy
             double ex_before=-dot(s_old,h);
             double s_old_sq = dot(s_old,s_old);
@@ -220,13 +185,10 @@ int main(int argc, char *argv[]){
           
             //pick new spin from distribution
             double r_theta=uni_dist(rng);
-            //debug<<r_theta<<" ";
             double r_phi = uni_dist(rng);
-            //double s_new=int_M_adaptive(h, hmin, hmax, r);
             double s_new[3] = {};
-            //mapping_function(h,J,hmin,hmax,r_theta,r_phi,kT,s_new);
-            debug<<mapping_function(h,J,hmin,hmax,r_theta,r_phi,kT,s_new)<<" ";
-   			debug<<mag(s_new)<<endl;
+            mapping_function(h,hmin,hmax,r_theta,r_phi,kT,s_new);
+
             //compute change in energy and assign new spin
             double ex_after=-dot(s_new,h);
             double s_new_sq = dot(s_new,s_new);
@@ -448,7 +410,6 @@ double total_X(double arr[n1][n2][n3][3], double js[3], double u0, double umin, 
     double ex=0;
     double m[3]={};
 	double l_field[3] = {};
-
     for(int i=0; i<n1; i++){
         for(int j=0; j<n2; j++){
             for(int k=0; k<n3; k++){
@@ -480,13 +441,12 @@ double total_U(double arr[n1][n2][n3][3], double js[3], double u0, double umin, 
                 eu+=u0+((u0+umin)/(mmin*mmin)*(-2*m_sq + m_sq*m_sq/(mmin*mmin)));
             }
         }
-    }
-    
+    }   
     return eu;
 }
 
 
-double mapping_function(double h[3], double js[3],double hmin, double hmax, double r_theta, double r_phi, double kT,double s_new[3]){
+double mapping_function(double h[3],double hmin, double hmax, double r_theta, double r_phi, double kT,double s_new[3]){
 	//Analytic mapping function for inverse transform sampling
 	//Rotate h to be along z axis, and store rotation matrix. Angles are easy to define wrt z axis.
 	//Generate random vector from angular distribution and rotate back.
@@ -495,37 +455,26 @@ double mapping_function(double h[3], double js[3],double hmin, double hmax, doub
 	for(int x=0;x<3;x++){
 		s_new[x]=0;
 	}
-	//just use js[0] for cubic lattice
-    //double h_temp[3] = {};
-    //mul(h,js,h_temp);
-	double h_mag = mag(h);//copysign(mag(h),js[0]*js[1]*js[2]);
-	//double h_mag = mag(h_temp);
-    //double h_mag = js[0]*mag(h);
-    //cout<<h_mag<<endl;
+	double h_mag = mag(h);
 	//rotation maps e_z to direction of h. 
 	double rotation[3][3] = {};
 	rotate_to_z(h,rotation);
-	//for(int x=0;x<3;x++){
-    //	for(int y=0;y<3;y++){
-    //  		cout<<rotation[x][y]<<" ";
-    //	}
-    //	cout<<endl;
-  	//}
-
-	//theta component
-	//cout<<r_theta<<" ";
+    //cos(theta) component. Don't bother with arccos as it's only going to be used with trig funcs
 	double cos_theta = (kT/(h_mag))*log((1-r_theta)*exp(h_mag/kT)+r_theta*exp(-h_mag/kT));
-	//cout<<cos_theta<<endl;
-	//phi component
-	double phi = 2*((double)pi*r_phi);
-	//Set s_new to vector with random angles drawn from specified distribution. 
-	//Angles wrt e_z (i.e. typical spherical polar coords)
 	double sin_theta = sqrt(1-cos_theta*cos_theta); 
 
+    //error catching for very low temperatures
+    //as T -> 0, sometimes cos_theta diverges
 	if(std::isnan(cos_theta)){
 		cos_theta=1;
 		sin_theta=0;
 	}
+
+	//phi component
+	double phi = 2*((double)pi*r_phi);
+	//Set s_new to vector with random angles drawn from specified distribution. 
+	//Angles wrt e_z (i.e. typical spherical polar coords)
+
 	s_new[0] = cos(phi)*sin_theta;
 	s_new[1] = sin(phi)*sin_theta;
 	s_new[2] = cos_theta;
@@ -558,6 +507,7 @@ double mul(double v1[3],double v2[3],double v_out[3]){
 
 
 double matvecmul(double m[3][3],double v_in[3]){
+  //multiply vector in place by matrix
   double v_out[3] = {0,0,0};
   for(int x=0;x<3;x++){
     for(int y=0;y<3;y++){
@@ -567,7 +517,6 @@ double matvecmul(double m[3][3],double v_in[3]){
   for(int x=0;x<3;x++){
     v_in[x]=v_out[x];
   }
-  //return 0;
 }
 
 double matmul(double m1[3][3],double m2[3][3],double m_out[3][3]){
@@ -584,18 +533,18 @@ double matmul(double m1[3][3],double m2[3][3],double m_out[3][3]){
       }
     }
   }
-  //return 0;
 }
 
 int normalise(double v[3]){
+  //normalise vector in place
   double mag = sqrt(v[0]*v[0]+v[1]*v[1]+v[2]*v[2]);
   for(int x=0;x<3;x++){
     v[x] = v[x]/mag;
   }
-  //return 0;
 }
 
 int transpose(double m[3][3]){
+  //transpose matrix in place
   double m_copy[3][3] = {};
   for(int x=0;x<3;x++){
     for(int y=0;y<3;y++){
@@ -607,7 +556,6 @@ int transpose(double m[3][3]){
       m[x][y] = m_copy[y][x];
     }
   }
-  //return 0;
 }
 
 double det(double m[3][3]){
@@ -653,231 +601,6 @@ double rotate_to_z(double v[3],double m[3][3]){
       }
     }
   }
-  //matvecmul(m,vec,v);
   //Transpose matrix as inverse rotation (i.e. e_z -> v) is needed.
   transpose(m);
-  //return det(m);
-  //cout<<det(m)<<endl;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-//***********************************//
-//-----------------------------------//
-//        M sampler FUNCTIONS        //
-//-----------------------------------//
-//***********************************//
-/*
-//boltzmann factor
-double boltz(double h, double m, double u0, double umin, double mmin, double kT){
-    return exp( -(x+u0+m*(-h + (u0+umin)*(-2*m + m*m*m/(mmin*mmin))/(mmin*mmin)))/kT );
-}
-
-//partition function integral over m
-// uses trapezium method
-double part_func(double h, double u0, double umin, double mmin, double kT){
-    double dm=2.0/(Nm-1);
-    double Zmid=0;
-    for(int i=0; i<Nm; i++){
-        Zmid+=boltz(h, -1+i*dm, u0, umin, mmin, kT);
-    }
-    double z=0.5*dm*(boltz(h, -1, u0, umin, mmin, kT)+2*Zmid+boltz(h, 1, u0, umin, mmin, kT));
-    return z;
-}
-
-//integrates probability (boltz/Z) to get cumulative dist function
-void gen_CDF(double hmin, double hmax, double u0, double umin, double mmin, double kT){
-    double h, dh=(hmax-hmin)/(Nh-1); //because we need to data points at either end!
-    double dm=2.0/(Nm-1);
-    
-    double Z, cdf;
-    
-    for (int i=0; i<Nh; i++){
-        h=hmin+i*dh;
-        //calculate partition function for this h
-        Z=part_func(h, u0, umin, mmin, kT);
-        
-        //calculate CDF
-        // Lots of safety features in here, best to leave them be
-        cdf=0;
-        CDF[i][0]=0; //force the first point to be 0
-        for(int j=1; j<Nm; j++){
-            cdf+=0.5*dm*(boltz(h, -1+(j-1)*dm, u0, umin, mmin, kT)
-                         + boltz(h, -1+j*dm, u0, umin, mmin, kT));
-            if(cdf==0){
-                CDF[i][j]=0;
-            }
-            else if(std::isinf(cdf)==1){
-                CDF[i][j]=1;
-            }
-            else{
-                if(std::isnan(Z)==1){
-                    cout << "NOT DONE\n Z is nan, pick better X\n";
-                    exit(-1);
-                }
-                else if(std::isinf(Z)==1){
-                    cout << "NOT DONE\n Z is infinite, pick better X\n";
-                    exit(-1);
-                }
-                else if(Z==0){
-                    cout << "NOT DONE\n Z is zero, pick better X\n";
-                    exit(-1);
-                }
-                CDF[i][j]=cdf/Z;
-            }
-        }
-        for(int j=0; j<Nm; j++){
-            CDF[i][j]/=CDF[i][Nm-1]; //force the last point to be 1 by normalising
-        }
-    }
-    
-}
-
-//Bilinear interpolation of the CDF array
-double int_CDF(double h, double hmin, double hmax, double m){
-    // find grid points either side of h coord
-    double dh=(hmax-hmin)/(Nh-1);
-    double harr=(h-hmin)/dh;
-    int h1arr=floor(harr), h2arr=ceil(harr);
-    
-    //find grid points either side of m coord
-    double dm=2.0/(Nm-1);
-    double marr=(m+1.0)/dm;
-    int m1arr=floor(marr), m2arr=ceil(marr);
-    
-    double outp;
-    
-    if(h1arr!=h2arr){
-        if(m1arr!=m2arr){
-            double m1=-1+dm*m1arr, m2=-1+dm*m2arr;
-            double h1=hmin+dh*h1arr, h2=hmin+dh*h2arr;
-            outp = (CDF[h1arr][m1arr]*(h2-h)*(m2-m) +
-                    CDF[h2arr][m1arr]*(h-h1)*(m2-m) +
-                    CDF[h1arr][m2arr]*(h2-h)*(m-m1) +
-                    CDF[h2arr][m2arr]*(h-h1)*(m-m1))/(h2-h1)/(m2-m1);
-        }
-        else if(m1arr==m2arr){
-            double h1=hmin+dh*h1arr, h2=hmin+dh*h2arr;
-            outp = CDF[h1arr][(int)marr] + (CDF[h2arr][(int)marr]-CDF[h1arr][(int)marr])*(h-h1)/(h2-h1);
-        }
-    }
-    else{
-        if(m1arr!=m2arr){
-            double m1=-1+dm*m1arr, m2=-1+dm*m2arr;
-            outp = CDF[(int)harr][m1arr] + (CDF[(int)harr][m2arr]-CDF[(int)harr][m1arr])*(m-m1)/(m2-m1);
-        }
-        else if(m1arr==m2arr){
-            outp = CDF[(int)harr][(int)marr];
-        }
-    }
-    
-    return outp;
-}
-
-//Converts a given value of R into array units. Gives the array value below it.
-// Given a random number 0<R<1, this scans through the CDF and finds the
-// grid point in the CDF array below where this R corresponds too
-int R_to_array(int harr, double R){
-    int lowi=0, highi=Nm-1;
-    int midhighi=(highi+1)/2, midlowi=midhighi-1;
-    double lowR, midlowR, midhighR, highR;
-    //Uses a bisection type algorithm, which is why
-    // Nm should always be a power of 2
-    while(highi-lowi!=1){
-        lowR=CDF[harr][lowi];
-        highR=CDF[harr][highi];
-        midlowR=CDF[harr][midlowi];
-        midhighR=CDF[harr][midhighi];
-        
-        if(R>lowR && R<midlowR){ //if it's in the bottom half
-            highi=midlowi;
-            midhighi=lowi+(highi+1-lowi)/2;
-            midlowi=midhighi-1;
-        }
-        else if(R>midhighR && R<highR){ //if it's in the top half
-            lowi=midhighi;
-            midhighi=lowi+(highi+1-lowi)/2;
-            midlowi=midhighi-1;
-        }
-        else if(R>midlowR && R<midhighR){ //if it's in the middle
-            lowi=midlowi;
-            highi=midhighi;
-        }
-    }
-    
-    return lowi;
-}
-
-//Mapping function. Returns m for any R and h by linearly interpolating array
-// This inverts the CDF *on the fly* using R_to_array. Four points to be
-// interpolated between are now *non-rectangular*, so need to use something fancy
-double int_M_adaptive(double h, double hmin, double hmax, double R){
-    double dm=2.0/(Nm-1.0);
-    double dh=(hmax-hmin)/(Nh-1);
-    double harr=(h-hmin)/dh;
-    int h1arr=floor(harr), h2arr=ceil(harr);
-    
-    double outp;
-    
-    if(h1arr!=h2arr){
-        //converting R into array units
-        int R11arr=R_to_array(h1arr, R);
-        int R12arr=R11arr+1;
-        int R21arr=R_to_array(h2arr, R);
-        int R22arr=R21arr+1;
-
-        //all the coords we need
-        double h1=hmin+dh*h1arr, h2=hmin+dh*h2arr;
-        double R11=CDF[h1arr][R11arr], R12=CDF[h1arr][R12arr];
-        double R21=CDF[h2arr][R21arr], R22=CDF[h2arr][R22arr];
-        
-        //now do some algebra with ^^those^^ things to interpolate
-        //convenient definitions
-        double Dh=h2-h1;
-        double DR1=R12-R11, DR2=R22-R21;
-        //quadratic coefficients
-        double a=Dh*(DR1-DR2);
-        double b=(h1-h)*(DR1-DR2)-Dh*DR1;
-        double g=(h-h1)*DR1;
-        
-        //finding s and t
-        double s, s1, s2, t;
-        if(a==0){ s=-g/b;} //don't need to solve quadratic (often true to double prec)
-        else{ //need to solve quadratic
-            double ss=sqrt(b*b-4*a*g);
-            s1=(-b+ss)/(2*a), s2=(-b-ss)/(2*a);
-            if(s1>0 && s1<1){ s=s1; }
-            else{ s=s2; }
-        }
-        t=(R-R12-s*(R22-R12))/(R11-R12+s*(DR1-DR2));
-        
-        //bilinear interpolation
-        outp = (-1+dm*R12arr)*(1-s)*(1-t) +
-        (-1+dm*R22arr)*s*(1-t) +
-        (-1+dm*R11arr)*(1-s)*t +
-        (-1+dm*R21arr)*s*t;
-    }
-    else{//(if we lie directly on a grid point) NEVER EVEN GETS USED SO IS INCOMPLETE
-        int R1arr=R_to_array(h1arr, R);
-        int R2arr=R1arr+1;
-        
-        double M1=-1+dm*R1arr;
-        double M2=-1+dm*R2arr;
-        double R1=CDF[h1arr][R1arr];
-        double R2=CDF[h1arr][R2arr];
-        outp = M1 + (R-R1)*(M2-M1)/(R2-R1);
-    }
-    
-    return outp;
-}
-*/
-
