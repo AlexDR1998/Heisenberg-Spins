@@ -22,15 +22,15 @@ eqsweeps avsweeps
 using namespace std;
 
 //array size for spin lattice
-#define n1 5
-#define n2 5
-#define n3 5
+#define n1 10
+#define n2 10
+#define n3 10
 //4th dimension of spin lattice array is 3, to store cartesian vectors
 double spins[n1][n2][n3][3] ={};
 double J[3]={};
 
 //grid of points for CDF integral
-#define Nh 10001
+#define Nh 100001
 #define Nm 1024 //ALWAYS 2^N (where N is some integer)
 double CDF[Nh][Nm]; //cumulative distribution function
 
@@ -97,6 +97,8 @@ int main(int argc, char *argv[]){
                >> u0 >> umin >> mmin
                >> eqsweeps >> avsweeps
                >> x;
+    //Easiest way to modify u0 from bash script
+    u0 = stod(argv[4]);
     sweeps=eqsweeps+avsweeps;
     //Not sure about this? - only applise to triangular lattice?
     //Jtot=2*abs(J[0]) + 2*abs(J[1]) + 6*abs(J[2]);
