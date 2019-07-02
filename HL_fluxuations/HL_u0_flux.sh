@@ -8,17 +8,6 @@
 g++ -std=c++11 -g -O2 -mcmodel=medium ../HL_MC_heatbath.cpp -o outp.o
 #g++ -std=c++11 -g -O3 IL_MC_heatbath_split.cpp -o outp.o
 #empties the output files
->energy.txt
->energy2.txt
->spin_total.txt
->spin_total_even.txt
->spin_total_odd.txt
->spin2_total.txt
->spin2_total_even.txt
->spin2_total_odd.txt
->spins.txt
->spins2.txt
->spin_corr.txt
 
 #temperature step size
 dT=0.1
@@ -27,6 +16,17 @@ u0=(0.5 1 5 10 20 50 100)
 
 for i in ${u0[*]}; do
 
+	>energy.txt
+	>energy2.txt
+	>spin_total.txt
+	>spin_total_even.txt
+	>spin_total_odd.txt
+	>spin2_total.txt
+	>spin2_total_even.txt
+	>spin2_total_odd.txt
+	>spins.txt
+	>spins2.txt
+	>spin_corr.txt
 
 	./outp.o none 5 1 $i
 
