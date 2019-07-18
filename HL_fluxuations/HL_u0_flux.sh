@@ -11,7 +11,8 @@ g++ -std=c++11 -g -O2 -mcmodel=medium ../HL_MC_heatbath.cpp -o outp.o
 
 #temperature step size
 dT=0.1
-u0=(0.5 1 5 10 20 50 100)
+u0=(0.5 1 2 3 4 5 6 7 8 9 10 12 14 16 18 20 50 100 200)
+
 #initial high temperature run
 
 for i in ${u0[*]}; do
@@ -40,14 +41,14 @@ for i in ${u0[*]}; do
 	cp energy.txt result$i
 	cp energy2.txt result$i
 	cp spin_total.txt result$i
-	cp spin_total_even.txt result$i
-	cp spin_total_odd.txt result$i
+	#cp spin_total_even.txt result$i
+	#cp spin_total_odd.txt result$i
 	cp spin2_total.txt result$i
-	cp spin2_total_even.txt result$i
-	cp spin2_total_odd.txt result$i
+	#cp spin2_total_even.txt result$i
+	#cp spin2_total_odd.txt result$i
 	cp spins.txt result$i
 	cp spins2.txt result$i
-	cp spin_corr.txt result$i
+	#cp spin_corr.txt result$i
 
 
 
