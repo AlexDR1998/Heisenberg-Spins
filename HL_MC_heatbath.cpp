@@ -104,7 +104,7 @@ int main(int argc, char *argv[]){
                >> x;
     
     //Easiest way to modify u0 from bash script
-    //u0 = stod(argv[4]);
+    u0 = stod(argv[4]);
     //D = stod(argv[4]);
     sweeps=eqsweeps+avsweeps;
     //Not sure about this? - only aplicable to triangular lattice?
