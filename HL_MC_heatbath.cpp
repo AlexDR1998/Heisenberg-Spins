@@ -22,12 +22,13 @@ eqsweeps avsweeps
 using namespace std;
 
 //array size for spin lattice
-#define n1 10
-#define n2 10
-#define n3 10
+#define n1 20
+#define n2 20
+#define n3 20
 //4th dimension of spin lattice array is 3, to store cartesian vectors
 double spins[n1][n2][n3][3] ={};
 double J[3]={};
+double D = 0;
 
 //grid of points for CDF integral
 #define Nh 100001
@@ -42,7 +43,7 @@ double x;
 //------------------------- Function declarations------------------------------------------
 //Monte carlo functions
 int PBC(int n, int nmax);
-double local_field(double arr[n1][n2][n3][3], double js[3], int i, int j, int k,double h[3]);
+double local_field(double arr[n1][n2][n3][3], double js[3],double D, int i, int j, int k,double h[3]);
 double total_X(double arr[n1][n2][n3][3], double js[3], double u0, double umin, double mmin);
 double total_U(double arr[n1][n2][n3][3], double js[3], double u0, double umin, double mmin);
 double total_energy(double arr[n1][n2][n3][3], double js[3], double u0, double umin, double mmin);
@@ -65,6 +66,7 @@ double int_M_adaptive(double h, double hmin, double hmax, double R);
 //Linear algebra helper functions - define my own for now, might import LA library later
 double mag(double v[3]);
 double dot(double v1[3],double v2[3]);
+double cross(double v1[3],double v2[3],double v_out[3]);
 double mul(double v1[3],double v2[3],double v_out[3]);
 double scalmul(double v[3],double scal);
 double matmul(double m1[3][3],double m2[3][3],double m_out[3][3]);
@@ -81,11 +83,14 @@ int main(int argc, char *argv[]){
     debug.open("debug.txt");
     
     //command line input arguments
+    //cout<<"ah"<<endl;
     string spinin_file=argv[1]; //source of spin structure
+    
     double kT=stod(argv[2]);
+
     double rngseed=stod(argv[3]);
     //seperate mmin used for magnitude distribution only.
-    double m_magnitude = 1.0;
+
     //system parameters to be read from system file
     double Jtot;
     double u0, umin, mmin; //umin is a relic, always zero
@@ -93,17 +98,19 @@ int main(int argc, char *argv[]){
     
     //reading system information
     ifstream systin_str("system.txt");
-    systin_str >> J[0] >> J[1] >> J[2]
+    systin_str >> J[0] >> J[1] >> J[2] >> D
                >> u0 >> umin >> mmin
                >> eqsweeps >> avsweeps
                >> x;
+    
     //Easiest way to modify u0 from bash script
-    u0 = stod(argv[4]);
+    //u0 = stod(argv[4]);
+    //D = stod(argv[4]);
     sweeps=eqsweeps+avsweeps;
-    //Not sure about this? - only applise to triangular lattice?
+    //Not sure about this? - only aplicable to triangular lattice?
     //Jtot=2*abs(J[0]) + 2*abs(J[1]) + 6*abs(J[2]);
     //Jtot=2*abs(J[0]) + 2*abs(J[1]) + 2*abs(J[2]);
-    Jtot = 6*abs(J[0]);
+    Jtot = 6*abs(J[0])+6*abs(D);
     //scaling units for m* in calculation
     //calculation is done in units where m*=1 (historical reasons)
     u0*=(mmin*mmin);
@@ -156,7 +163,7 @@ int main(int argc, char *argv[]){
     //setting up probability distribution sampler
     double hmin=0, hmax=integral_bound*Jtot;
     cout << "(*) Generating cumulative distribution function... " << flush;
-    gen_CDF(hmin, hmax, u0, umin, m_magnitude, kT);
+    gen_CDF(hmin, hmax, u0, umin, mmin, kT);
     cout << "DONE\n";
 
     //Debug for testing probability distribution
@@ -212,7 +219,7 @@ int main(int argc, char *argv[]){
             }
             double mag_old = mag(s_old);
             double h[3] = {};
-            local_field(spins, J, a, b, c, h);
+            local_field(spins, J, D, a, b, c, h);
 
             //computing initial local energy
             double ex_before=-dot(s_old,h);
@@ -412,7 +419,7 @@ int PBC(int n, int nmax){
 }
 
 //Computes local field. This is where lattice information enters
-double local_field(double arr[n1][n2][n3][3], double js[3], int i, int j, int k,double h[3]){
+double local_field(double arr[n1][n2][n3][3], double js[3],double D, int i, int j, int k,double h[3]){
     i=PBC(i,n1);
     j=PBC(j,n2);
     k=PBC(k,n3);
@@ -423,6 +430,24 @@ double local_field(double arr[n1][n2][n3][3], double js[3], int i, int j, int k,
     		 js[1]*(arr[i][PBC(j+1,n2)][k][x]+arr[i][PBC(j-1,n2)][k][x]) +
     		 js[2]*(arr[PBC(i+1,n1)][j][k][x]+arr[PBC(i-1,n1)][j][k][x]);
     }
+    //Edit here to add DM interactions
+    double dms[6][3] = {};
+    //n_ij is the set of unit vectors from a site to any neighbouring site. Trivial for cubic but
+    //likely more complicated for triangular lattice
+    double n_ij[6][3] = {{1,0,0},{-1,0,0},{0,1,0},{0,-1,0},{0,0,1},{0,0,-1}};
+    cross(arr[i][j][PBC(k+1,n3)],n_ij[0],dms[0]);
+    cross(arr[i][j][PBC(k-1,n3)],n_ij[1],dms[1]);
+    cross(arr[i][PBC(j+1,n2)][k],n_ij[2],dms[2]);
+    cross(arr[i][PBC(j-1,n2)][k],n_ij[3],dms[3]);
+    cross(arr[PBC(i+1,n1)][j][k],n_ij[4],dms[4]);
+    cross(arr[PBC(i-1,n1)][j][k],n_ij[5],dms[5]);
+
+    for (int y=0;y<6;y++){
+        for (int x=0;x<3;x++){
+            h[x]+=D*dms[y][x];
+        }
+    }
+
 
 
     //Triangle lattice
@@ -449,7 +474,7 @@ double total_energy(double arr[n1][n2][n3][3], double js[3], double u0, double u
                 for(int x=0;x<3;x++){
                 	m[x]=arr[i][j][k][x];
                 }
-                local_field(arr, js, i, j, k,l_field);
+                local_field(arr, js, D, i, j, k,l_field);
                 double m_sq = dot(m,m);
                 e+=u0+(-0.5*dot(m,l_field) + (u0+umin)/(mmin*mmin)*(-2*m_sq + m_sq*m_sq/(mmin*mmin)));
             }
@@ -470,7 +495,7 @@ double total_X(double arr[n1][n2][n3][3], double js[3], double u0, double umin, 
             	for(int x=0;x<3;x++){
                 	m[x]=arr[i][j][k][x];
             	}
-                local_field(arr, js, i, j, k,l_field);
+                local_field(arr, js,D, i, j, k,l_field);
                 ex+=-0.5*dot(m,l_field);
             }
         }
@@ -490,7 +515,7 @@ double total_U(double arr[n1][n2][n3][3], double js[3], double u0, double umin, 
             	for(int x=0;x<3;x++){
                 	m[x]=arr[i][j][k][x];
                 }
-                local_field(arr, js, i, j, k,l_field);
+                local_field(arr, js,D, i, j, k,l_field);
                 double m_sq = dot(m,m);
                 eu+=u0+((u0+umin)/(mmin*mmin)*(-2*m_sq + m_sq*m_sq/(mmin*mmin)));
             }
@@ -555,6 +580,11 @@ double dot(double v1[3],double v2[3]){
 	return (v1[0]*v2[0]+v1[1]*v2[1]+v1[2]*v2[2]);
 }
 
+double cross(double v1[3],double v2[3],double v_out[3]){
+    v_out[0]=v1[1]*v2[2]-v1[2]*v2[1];
+    v_out[1]=v1[2]*v2[0]-v1[0]*v2[2];
+    v_out[2]=v1[0]*v2[1]-v1[1]*v2[0];  
+}
 
 double mul(double v1[3],double v2[3],double v_out[3]){
     for(int x=0;x<3;x++){
