@@ -5,7 +5,7 @@
 #$ -l h_vmem=16G
 #compile c++ script first
 #g++ -std=c++11 -g -O3 -mcmodel=medium source.cpp -o outp.o
-g++ -std=c++11 -g -O2 -mcmodel=medium ../CH_MC_heatbath.cpp -o outp.o
+g++ -std=c++11 -g -O2 -mcmodel=medium ../HL_MC_heatbath.cpp -o outp.o
 #g++ -std=c++11 -g -O3 IL_MC_heatbath_split.cpp -o outp.o
 #empties the output files
 >energy.txt
@@ -22,27 +22,27 @@ g++ -std=c++11 -g -O2 -mcmodel=medium ../CH_MC_heatbath.cpp -o outp.o
 
 #Set parameters
 dT=0.05
-u0=$SGE_TASK_ID
+#u0=$SGE_TASK_ID
 
 #initial high temperature run
-./outp.o none 5 1 $u0
+./outp.o none 5 1 $SGE_TASK_ID
 
 #cooling system
 for j in $(seq 99 -1 1); do
 kT=$(echo "scale=4; $j*$dT"|bc)
-./outp.o spins_after.txt $kT 1 $u0
+./outp.o spins_after.txt $kT 1 $SGE_TASK_ID
 done
 
 
 #Store results
-mkdir result$u0
-cp energy.txt result$u0
-cp energy2.txt result$u0
-cp spin_total.txt result$u0
-#cp spin_total_even.txt result$u0
-#cp spin_total_odd.txt result$u0
-cp spin2_total.txt result$u0
-#cp spin2_total_even.txt result$u0
-#cp spin2_total_odd.txt result$u0
-cp spins.txt result$u0
-cp spins2.txt result$u0
+mkdir result$SGE_TASK_ID
+cp energy.txt result$SGE_TASK_ID
+cp energy2.txt result$SGE_TASK_ID
+cp spin_total.txt result$SGE_TASK_ID
+#cp spin_total_even.txt result$SGE_TASK_ID
+#cp spin_total_odd.txt result$SGE_TASK_ID
+cp spin2_total.txt result$SGE_TASK_ID
+#cp spin2_total_even.txt result$SGE_TASK_ID
+#cp spin2_total_odd.txt result$SGE_TASK_ID
+cp spins.txt result$SGE_TASK_ID
+cp spins2.txt result$SGE_TASK_ID
