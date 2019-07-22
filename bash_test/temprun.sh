@@ -38,7 +38,7 @@ dT=0.05
 #cooling system
 for j in $(seq 99 -1 1); do
 kT=$(echo "scale=4; $j*$dT"|bc)
-./outp.o spins_after.txt $kT 1 $SGE_TASK_ID
+./outp spins_after.txt $kT 1 $SGE_TASK_ID
 done
 
 
