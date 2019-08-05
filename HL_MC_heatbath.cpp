@@ -430,6 +430,8 @@ double local_field(double arr[n1][n2][n3][3], double js[3],double D, int i, int 
     		 js[1]*(arr[i][PBC(j+1,n2)][k][x]+arr[i][PBC(j-1,n2)][k][x]) +
     		 js[2]*(arr[PBC(i+1,n1)][j][k][x]+arr[PBC(i-1,n1)][j][k][x]);
     }
+    
+
     //Edit here to add DM interactions
     double dms[6][3] = {};
     //n_ij is the set of unit vectors from a site to any neighbouring site. Trivial for cubic but
@@ -449,6 +451,24 @@ double local_field(double arr[n1][n2][n3][3], double js[3],double D, int i, int 
     }
 
 
+    //include next nearest neighbours
+    for (int x=0;x<3;x++){
+        h[x]-=0.0625*(js[0]*(arr[i][j][PBC(k+2,n3)][x]+arr[i][j][PBC(k-2,n3)][x]) +
+                      js[1]*(arr[i][PBC(j+2,n2)][k][x]+arr[i][PBC(j-2,n2)][k][x]) +
+                      js[2]*(arr[PBC(i+2,n1)][j][k][x]+arr[PBC(i-2,n1)][j][k][x]));
+    }
+    cross(arr[i][j][PBC(k+2,n3)],n_ij[0],dms[0]);
+    cross(arr[i][j][PBC(k-2,n3)],n_ij[1],dms[1]);
+    cross(arr[i][PBC(j+2,n2)][k],n_ij[2],dms[2]);
+    cross(arr[i][PBC(j-2,n2)][k],n_ij[3],dms[3]);
+    cross(arr[PBC(i+2,n1)][j][k],n_ij[4],dms[4]);
+    cross(arr[PBC(i-2,n1)][j][k],n_ij[5],dms[5]);
+
+    for (int y=0;y<6;y++){
+        for (int x=0;x<3;x++){
+            h[x]-=0.125*D*dms[y][x];
+        }
+    }
 
     //Triangle lattice
     /*
