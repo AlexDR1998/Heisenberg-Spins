@@ -72,33 +72,33 @@ kT=$(echo "scale=4; $j*$dT+$t_end"|bc)
 ./outp.o spins_after.txt $kT 1 
 done
 
-peak=$(python peak.py $dT)
-t_start=$(echo "$peak+2*$dT"|bc)
-t_end=$(echo "$peak-2*$dT"|bc)
-echo $t_start
-echo $peak
-echo $t_end
+#peak=$(python peak.py $dT)
+#t_start=$(echo "$peak+2*$dT"|bc)
+#t_end=$(echo "$peak-2*$dT"|bc)
+#echo $t_start
+#echo $peak
+#echo $t_end
 
 
 #Empty output files
 
->energy.txt
->energy2.txt
->spin_total.txt
->spin_total_even.txt
->spin_total_odd.txt
->spin2_total.txt
->spin2_total_even.txt
->spin2_total_odd.txt
->spins.txt
->spins2.txt
->spin_corr.txt
+#>energy.txt
+#>energy2.txt
+#>spin_total.txt
+#>spin_total_even.txt
+#>spin_total_odd.txt
+#>spin2_total.txt
+#>spin2_total_even.txt
+#>spin2_total_odd.txt
+#>spins.txt
+#>spins2.txt
+#>spin_corr.txt
 
 #Re-run at higher temperature resolution, only around the peak
-./outp.o none $t_start 1 
-dT=0.001
-for j in $(seq 39 -1 1); do
-kT=$(echo "scale=4; $j*$dT+$t_end"|bc)
-./outp.o spins_after.txt $kT 1 
-done
+#./outp.o none $t_start 1 
+#dT=0.001
+#for j in $(seq 39 -1 1); do
+#kT=$(echo "scale=4; $j*$dT+$t_end"|bc)
+#./outp.o spins_after.txt $kT 1 
+#done
 
