@@ -6,8 +6,10 @@ size=20
 
 def peak_find():
 	dT = sys.argv[1]
-	mean_energies = np.loadtxt("energy.txt").transpose()
-	d = -(np.gradient(mean_energies[1])/size**3)/float(dT)
+	means = np.loadtxt("energy.txt").transpose()
+	means_squared = np.loadtxt("energy2.txt").transpose()
+	#d = -(np.gradient(means[1])/size**3)/float(dT)
+	d = (means_squared[1]-(means[1]*means[1]))/(means[0]*means[0]*size**3)
 	peak = np.argmax(d)
 	return mean_energies[0][peak]
 
