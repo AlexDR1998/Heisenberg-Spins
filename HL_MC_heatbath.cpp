@@ -22,9 +22,9 @@ eqsweeps avsweeps
 using namespace std;
 
 //array size for spin lattice
-#define n1 20
-#define n2 20
-#define n3 20
+#define n1 30
+#define n2 30
+#define n3 30
 //4th dimension of spin lattice array is 3, to store cartesian vectors
 double spins[n1][n2][n3][3] ={};
 double J[3]={};
@@ -161,7 +161,7 @@ int main(int argc, char *argv[]){
     
 
     //setting up probability distribution sampler
-    double hmin=0, hmax=integral_bound*Jtot;
+    double hmin=-integral_bound*Jtot, hmax=integral_bound*Jtot;
     cout << "(*) Generating cumulative distribution function... " << flush;
     gen_CDF(hmin, hmax, u0, umin, mmin, kT);
     cout << "DONE\n";
@@ -238,7 +238,7 @@ int main(int argc, char *argv[]){
             
             //pick new magnitude from distribution
             double r = uni_dist(rng);
-            double h_scal = abs(dot(h,s_new));
+            double h_scal = dot(h,s_new);
             //debug<<h_scal<<" ";
             double mag_new=int_M_adaptive(h_scal,hmin, hmax, r);
             //cout<<mag_new<<endl;;
