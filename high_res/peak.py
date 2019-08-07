@@ -2,7 +2,7 @@ import numpy as np
 import sys
 
 #short script that just finds the peak temperature in heat capacity plot
-size=20
+size=30
 
 def peak_find():
 	dT = sys.argv[1]
@@ -11,7 +11,7 @@ def peak_find():
 	#d = -(np.gradient(means[1])/size**3)/float(dT)
 	d = (means_squared[1]-(means[1]*means[1]))/(means[0]*means[0]*size**3)
 	peak = np.argmax(d)
-	return mean_energies[0][peak]
+	return means[0][peak]
 
 def main():
 	print(peak_find())
