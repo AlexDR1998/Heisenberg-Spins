@@ -22,9 +22,9 @@ eqsweeps avsweeps
 using namespace std;
 
 //array size for spin lattice
-#define n1 30
-#define n2 30
-#define n3 30
+#define n1 20
+#define n2 20
+#define n3 20
 //4th dimension of spin lattice array is 3, to store cartesian vectors
 double spins[n1][n2][n3][3] ={};
 double J[3]={};
@@ -241,7 +241,7 @@ int main(int argc, char *argv[]){
             double h_scal = dot(h,s_new);
             //debug<<h_scal<<" ";
             double mag_new=int_M_adaptive(h_scal,hmin, hmax, r);
-            //cout<<mag_new<<endl;;
+            debug<<mag_new<<endl;;
             
             scalmul(s_new,mag_new);
             //debug<<mag_new<<endl;
@@ -759,7 +759,7 @@ double part_func(double h_cos_theta, double u0, double umin, double mmin, double
 void gen_CDF(double hmin, double hmax, double u0, double umin, double mmin, double kT){
     double h, dh=(hmax-hmin)/(Nh-1); //because we need to data points at either end!
     //double dm=2.0/(Nm-1);
-    double dm =integral_bound/(Nm-1);
+    double dm = 2*integral_bound/(Nm-1);
     double Z, cdf;
     
     for (int i=0; i<Nh; i++){
