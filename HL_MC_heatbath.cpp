@@ -22,9 +22,9 @@ eqsweeps avsweeps
 using namespace std;
 
 //array size for spin lattice
-#define n1 20
-#define n2 20
-#define n3 20
+#define n1 24
+#define n2 24
+#define n3 24
 //4th dimension of spin lattice array is 3, to store cartesian vectors
 double spins[n1][n2][n3][3] ={};
 double J[3]={};
@@ -43,14 +43,14 @@ double x;
 //------------------------- Function declarations------------------------------------------
 //Monte carlo functions
 int PBC(int n, int nmax);
-double local_field(double arr[n1][n2][n3][3], double js[3],double D, int i, int j, int k,double h[3]);
+void local_field(double arr[n1][n2][n3][3], double js[3],double D, int i, int j, int k,double h[3]);
 double total_X(double arr[n1][n2][n3][3], double js[3], double u0, double umin, double mmin);
 double total_U(double arr[n1][n2][n3][3], double js[3], double u0, double umin, double mmin);
 double total_energy(double arr[n1][n2][n3][3], double js[3], double u0, double umin, double mmin);
 
 
 //
-double mapping_function(double h[3],double js[3],double hmin, double hmax, double r_theta, double r_phi, double kT,double s_new[3],double s_old[3]);
+void mapping_function(double h[3],double js[3],double hmin, double hmax, double r_theta, double r_phi, double kT,double s_new[3],double s_old[3]);
 
 
 //Functions for sampling prob dist
@@ -66,14 +66,14 @@ double int_M_adaptive(double h, double hmin, double hmax, double R);
 //Linear algebra helper functions - define my own for now, might import LA library later
 double mag(double v[3]);
 double dot(double v1[3],double v2[3]);
-double cross(double v1[3],double v2[3],double v_out[3]);
-double mul(double v1[3],double v2[3],double v_out[3]);
-double scalmul(double v[3],double scal);
-double matmul(double m1[3][3],double m2[3][3],double m_out[3][3]);
-double matvecmul(double m[3][3],double v_in[3]);
-int normalise(double v[3]);
-double rotate_to_z(double v[3],double m[3][3]);
-int transpose(double m[3][3]);
+void cross(double v1[3],double v2[3],double v_out[3]);
+void mul(double v1[3],double v2[3],double v_out[3]);
+void scalmul(double v[3],double scal);
+void matmul(double m1[3][3],double m2[3][3],double m_out[3][3]);
+void matvecmul(double m[3][3],double v_in[3]);
+void normalise(double v[3]);
+void rotate_to_z(double v[3],double m[3][3]);
+void transpose(double m[3][3]);
 double det(double m[3][3]);
 //-----------------------------------------------------------------------------------------------
 
@@ -162,6 +162,7 @@ int main(int argc, char *argv[]){
 
     //setting up probability distribution sampler
     double hmin=-integral_bound*Jtot, hmax=integral_bound*Jtot;
+    
     cout << "(*) Generating cumulative distribution function... " << flush;
     gen_CDF(hmin, hmax, u0, umin, mmin, kT);
     cout << "DONE\n";
@@ -172,21 +173,21 @@ int main(int argc, char *argv[]){
     //double i_count = 1000;
     //double s_temp[3] = {1,0,0};
     //double h_vector[3] = {1,0,0};
-    //double h_test = 1;
-    //for(int i=0; i<=10000; i++){
+    double h_test = -5;
+    for(int i=0; i<=100000; i++){
         //double r = (hmax-hmin)*i/i_count;
 
-    //    double ra = uni_dist(rng);
+        double ra = uni_dist(rng);
 
         //foutd << i << "\t" << h << endl;
         //cout << h << " ";
-    //    debug << int_M_adaptive(h_test,hmin,hmax,ra)<<" ";
+        debug << int_M_adaptive(h_test,hmin,hmax,ra)<<" ";
         //foutp.open("p_sample_"+to_string(i)+".txt");
         //for(int j=0; j<50000; j++){
         //    foutp << (h, hmin, hmax, uni_dist(rng)) << endl;
         //}
         //foutp.close();
-    //}
+    }
     //cout<<"aaah"<<endl;
     //Initialising averages. In order:
     // energy, squared energy, total spin, total spin squared
@@ -241,7 +242,7 @@ int main(int argc, char *argv[]){
             double h_scal = dot(h,s_new);
             //debug<<h_scal<<" ";
             double mag_new=int_M_adaptive(h_scal,hmin, hmax, r);
-            debug<<mag_new<<endl;;
+            //debug<<mag_new<<endl;;
             
             scalmul(s_new,mag_new);
             //debug<<mag_new<<endl;
@@ -419,7 +420,7 @@ int PBC(int n, int nmax){
 }
 
 //Computes local field. This is where lattice information enters
-double local_field(double arr[n1][n2][n3][3], double js[3],double D, int i, int j, int k,double h[3]){
+void local_field(double arr[n1][n2][n3][3], double js[3],double D, int i, int j, int k,double h[3]){
     i=PBC(i,n1);
     j=PBC(j,n2);
     k=PBC(k,n3);
@@ -546,7 +547,7 @@ double total_U(double arr[n1][n2][n3][3], double js[3], double u0, double umin, 
 }
 
 
-double mapping_function(double h[3], double js[3],double hmin, double hmax, double r_theta, double r_phi, double kT,double s_new[3],double s_old[3]){
+void mapping_function(double h[3], double js[3],double hmin, double hmax, double r_theta, double r_phi, double kT,double s_new[3],double s_old[3]){
 	//Analytic mapping function for inverse transform sampling
 	//Rotate h to be along z axis, and store rotation matrix. Angles are easy to define wrt z axis.
 	//Generate random vector from angular distribution and rotate back.
@@ -600,26 +601,26 @@ double dot(double v1[3],double v2[3]){
 	return (v1[0]*v2[0]+v1[1]*v2[1]+v1[2]*v2[2]);
 }
 
-double cross(double v1[3],double v2[3],double v_out[3]){
+void cross(double v1[3],double v2[3],double v_out[3]){
     v_out[0]=v1[1]*v2[2]-v1[2]*v2[1];
     v_out[1]=v1[2]*v2[0]-v1[0]*v2[2];
     v_out[2]=v1[0]*v2[1]-v1[1]*v2[0];  
 }
 
-double mul(double v1[3],double v2[3],double v_out[3]){
+void mul(double v1[3],double v2[3],double v_out[3]){
     for(int x=0;x<3;x++){
         v_out[x]=v1[x]*v2[x];
     }
 }
 
-double scalmul(double v[3],double scal){
+void scalmul(double v[3],double scal){
     //in place scalar multiplication of vector
     for(int x=0;x<3;x++){
         v[x]*=scal;
     }
 }
 
-double matvecmul(double m[3][3],double v_in[3]){
+void matvecmul(double m[3][3],double v_in[3]){
   //multiply vector in place by matrix
   double v_out[3] = {0,0,0};
   for(int x=0;x<3;x++){
@@ -632,7 +633,7 @@ double matvecmul(double m[3][3],double v_in[3]){
   }
 }
 
-double matmul(double m1[3][3],double m2[3][3],double m_out[3][3]){
+void matmul(double m1[3][3],double m2[3][3],double m_out[3][3]){
   //naive matrix multiplication
   for(int x=0;x<3;x++){
     for(int y=0;y<3;y++){
@@ -648,7 +649,7 @@ double matmul(double m1[3][3],double m2[3][3],double m_out[3][3]){
   }
 }
 
-int normalise(double v[3]){
+void normalise(double v[3]){
   //normalise vector in place
   double mag = sqrt(v[0]*v[0]+v[1]*v[1]+v[2]*v[2]);
   for(int x=0;x<3;x++){
@@ -657,7 +658,7 @@ int normalise(double v[3]){
 
 }
 
-int transpose(double m[3][3]){
+void transpose(double m[3][3]){
   //transpose matrix in place
   double m_copy[3][3] = {};
   for(int x=0;x<3;x++){
@@ -680,7 +681,7 @@ double det(double m[3][3]){
 
 
 
-double rotate_to_z(double v[3],double m[3][3]){
+void rotate_to_z(double v[3],double m[3][3]){
   //Calculates rotation matrix required to tranform e_z to given vector v.
   //First find rotation matrix mapping v to e_z, then invert(transpose).
 
@@ -737,7 +738,7 @@ double boltz(double h_cos_theta, double m, double u0, double umin, double mmin, 
     //double m_mag = mag(m);
     //return exp( -(-h_cos_theta*m +x+ u0+(u0+umin)*m*m/(mmin*mmin)*(m*m/(mmin*mmin)-2))/kT );
     //return m*m*exp( -(x+u0-h_cos_theta*m+(u0+umin)*m*m/(mmin*mmin)*(m*m/(mmin*mmin)-2))/kT);
-    return m*m*exp( -(x+u0+m*(-h_cos_theta + (u0+umin)*(-2*m + m*m*m/(mmin*mmin))/(mmin*mmin)))/kT );
+    return exp( -(x+u0+m*(-h_cos_theta + (u0+umin)*(-2*m + m*m*m/(mmin*mmin))/(mmin*mmin)))/kT );
 }
 
 //partition function integral over m
@@ -759,7 +760,7 @@ double part_func(double h_cos_theta, double u0, double umin, double mmin, double
 void gen_CDF(double hmin, double hmax, double u0, double umin, double mmin, double kT){
     double h, dh=(hmax-hmin)/(Nh-1); //because we need to data points at either end!
     //double dm=2.0/(Nm-1);
-    double dm = 2*integral_bound/(Nm-1);
+    double dm = integral_bound/(Nm-1);
     double Z, cdf;
     
     for (int i=0; i<Nh; i++){
