@@ -738,7 +738,7 @@ double boltz(double h_cos_theta, double m, double u0, double umin, double mmin, 
     //double m_mag = mag(m);
     //return exp( -(-h_cos_theta*m +x+ u0+(u0+umin)*m*m/(mmin*mmin)*(m*m/(mmin*mmin)-2))/kT );
     //return m*m*exp( -(x+u0-h_cos_theta*m+(u0+umin)*m*m/(mmin*mmin)*(m*m/(mmin*mmin)-2))/kT);
-    return exp( -(x+u0+m*(-h_cos_theta + (u0+umin)*(-2*m + m*m*m/(mmin*mmin))/(mmin*mmin)))/kT );
+    return m*m*exp( -(x+u0+m*(-h_cos_theta + (u0+umin)*(-2*m + m*m*m/(mmin*mmin))/(mmin*mmin)))/kT );
 }
 
 //partition function integral over m
