@@ -22,9 +22,9 @@ eqsweeps avsweeps
 using namespace std;
 
 //array size for spin lattice
-#define n1 24
-#define n2 24
-#define n3 24
+#define n1 12
+#define n2 12
+#define n3 12
 //4th dimension of spin lattice array is 3, to store cartesian vectors
 double spins[n1][n2][n3][3] ={};
 double J[3]={};
@@ -228,25 +228,32 @@ int main(int argc, char *argv[]){
             double eu_before= (u0+umin)/(mmin*mmin)*(-2*s_old_sq + s_old_sq*s_old_sq/(mmin*mmin));
             double len_before=ex_before+eu_before;
           
-            //pick new spin direction from distribution
+            //---- pick new spin direction from distribution-----------------------
+
             double r_theta=uni_dist(rng);
             double r_phi = uni_dist(rng);
             double s_new[3] = {};
+            double mag_old = mag(s_old);
             //Doesn't change magnitude of vectors
             mapping_function(h,J,hmin,hmax,r_theta,r_phi,kT/(mmin*mmin),s_new,s_old);
             //debug<<mapping_function(h,J,hmin,hmax,r_theta,r_phi,kT,s_new)<<" ";
             //debug<<mag(s_new)<<" ";
-            
-            //pick new magnitude from distribution
+            scalmul(s_new,mag_old);
+            //---------------------------------------------------------------------
+
+
+
+            //---- pick new magnitude from distribution----------------------------
             double r = uni_dist(rng);
             double h_scal = dot(h,s_new);
             //debug<<h_scal<<" ";
             double mag_new=int_M_adaptive(h_scal,hmin, hmax, r);
             //debug<<mag_new<<endl;;
             
-            scalmul(s_new,mag_new);
             //debug<<mag_new<<endl;
-
+            //----------------------------------------------------------------------
+            
+            scalmul(s_new,mag_new/mag_old);
 
 
             //compute change in energy and assign new spin
