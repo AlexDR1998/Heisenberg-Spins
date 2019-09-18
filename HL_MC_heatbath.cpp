@@ -233,7 +233,6 @@ int main(int argc, char *argv[]){
             double r_theta=uni_dist(rng);
             double r_phi = uni_dist(rng);
             double s_new[3] = {};
-            double mag_old = mag(s_old);
             //Doesn't change magnitude of vectors
             mapping_function(h,J,hmin,hmax,r_theta,r_phi,kT/(mmin*mmin),s_new,s_old);
             //debug<<mapping_function(h,J,hmin,hmax,r_theta,r_phi,kT,s_new)<<" ";
