@@ -234,7 +234,7 @@ int main(int argc, char *argv[]){
 
             //---- pick new magnitude from distribution----------------------------
             double r = uni_dist(rng);
-            double h_scal = dot(h,s_new);
+            double h_scal = dot(h,s_old);
             //debug<<h_scal<<" ";
             double mag_new=int_M_adaptive(h_scal,hmin, hmax, r);
             //debug<<mag_new<<endl;;
