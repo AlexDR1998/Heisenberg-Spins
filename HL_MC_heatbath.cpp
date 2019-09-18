@@ -252,7 +252,7 @@ int main(int argc, char *argv[]){
             //debug<<mag_new<<endl;
             //----------------------------------------------------------------------
             
-            scalmul(s_new,mag_new/mag_old);
+            scalmul(s_new,mag_new);
 
 
             //compute change in energy and assign new spin
