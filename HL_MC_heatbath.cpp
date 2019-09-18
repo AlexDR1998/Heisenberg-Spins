@@ -247,6 +247,7 @@ int main(int argc, char *argv[]){
 
 
 
+
             //---- pick new spin direction from distribution-----------------------
 
             double r_theta=uni_dist(rng);
