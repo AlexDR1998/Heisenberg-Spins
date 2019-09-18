@@ -228,6 +228,25 @@ int main(int argc, char *argv[]){
             double eu_before= (u0+umin)/(mmin*mmin)*(-2*s_old_sq + s_old_sq*s_old_sq/(mmin*mmin));
             double len_before=ex_before+eu_before;
           
+
+
+
+
+            //---- pick new magnitude from distribution----------------------------
+            double r = uni_dist(rng);
+            double h_scal = dot(h,s_new);
+            //debug<<h_scal<<" ";
+            double mag_new=int_M_adaptive(h_scal,hmin, hmax, r);
+            //debug<<mag_new<<endl;;
+            normalise(s_old);
+            scalmul(s_old,mag_new);
+            //debug<<mag_new<<endl;
+            //----------------------------------------------------------------------
+
+
+
+
+
             //---- pick new spin direction from distribution-----------------------
 
             double r_theta=uni_dist(rng);
@@ -241,18 +260,10 @@ int main(int argc, char *argv[]){
             //---------------------------------------------------------------------
 
 
-
-            //---- pick new magnitude from distribution----------------------------
-            double r = uni_dist(rng);
-            double h_scal = dot(h,s_new);
-            //debug<<h_scal<<" ";
-            double mag_new=int_M_adaptive(h_scal,hmin, hmax, r);
-            //debug<<mag_new<<endl;;
-            
-            //debug<<mag_new<<endl;
-            //----------------------------------------------------------------------
-            
             scalmul(s_new,mag_new);
+
+
+            
 
 
             //compute change in energy and assign new spin
