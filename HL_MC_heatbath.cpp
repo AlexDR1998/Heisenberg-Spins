@@ -237,14 +237,14 @@ int main(int argc, char *argv[]){
             mapping_function(h,J,hmin,hmax,r_theta,r_phi,kT/(mmin*mmin),s_new,s_old);
             //debug<<mapping_function(h,J,hmin,hmax,r_theta,r_phi,kT,s_new)<<" ";
             //debug<<mag(s_new)<<" ";
-            scalmul(s_new,mag_old);
+            //scalmul(s_new,mag_old);
             //---------------------------------------------------------------------
 
 
 
             //---- pick new magnitude from distribution----------------------------
             double r = uni_dist(rng);
-            double h_scal = dot(h,s_new);
+            double h_scal = mag_old*dot(h,s_new);
             //debug<<h_scal<<" ";
             double mag_new=int_M_adaptive(h_scal,hmin, hmax, r);
             //debug<<mag_new<<endl;;
